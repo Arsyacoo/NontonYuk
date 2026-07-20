@@ -22,6 +22,7 @@ export const metadata: Metadata = {
 
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
+import { WatchlistProvider } from "./context/watchlist-context";
 
 export default function RootLayout({
   children,
@@ -33,9 +34,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#09090b] text-white`}
       >
-        <Navbar />
-        {children}
-        <Footer />
+        <WatchlistProvider>
+          <Navbar />
+          {children}
+          <Footer />
+        </WatchlistProvider>
       </body>
     </html>
   );
