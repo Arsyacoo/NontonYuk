@@ -4,6 +4,7 @@ import { useState } from "react";
 import { HeroCarousel } from "./HeroCarousel";
 import { MovieRow } from "./MovieRow";
 import { MovieModal } from "./MovieModal";
+import { ContinueWatchingRow } from "./ContinueWatchingRow";
 import { Movie } from "@/app/lib/movies";
 
 interface HomeClientProps {
@@ -39,6 +40,9 @@ export function HomeClient({
 
             {/* Content Rows */}
             <div className="relative z-30 -mt-16 md:-mt-24 space-y-8 pb-20">
+                {/* Continue Watching Section */}
+                <ContinueWatchingRow onOpenModal={handleOpenModal} />
+
                 <MovieRow
                     title="Trending Now 🔥"
                     movies={trending}
