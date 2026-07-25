@@ -12,6 +12,7 @@ import { getAllMovies, Movie } from "@/app/lib/movies";
 
 const NAV_ITEMS = [
     { label: "Beranda", href: "/" },
+    { label: "Eksplor", href: "/explore" },
     { label: "Daftarku", href: "/watchlist", isWatchlist: true },
     { label: "Trending", href: "/genre/trending" },
     { label: "Action", href: "/genre/action" },
