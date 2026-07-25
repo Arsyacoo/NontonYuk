@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Play, Info, Share2, Plus } from "lucide-react";
+import { ArrowLeft, Play, Info, Share2, Plus, Server, AlertCircle } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import { getAllMovies, Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
@@ -11,6 +11,8 @@ interface WatchPageProps {
     params: Promise<{ id: string }>;
 }
 
+type ServerType = "vidsrc" | "superembed" | "embedsu";
+
 export default function WatchPage({ params }: WatchPageProps) {
     const { id } = use(params);
     const searchParams = useSearchParams();
@@ -18,6 +20,7 @@ export default function WatchPage({ params }: WatchPageProps) {
     const currentEpNumber = epParam ? parseInt(epParam, 10) : 1;
 
     const [movie, setMovie] = useState<Movie | null>(null);
+    const [activeServer, setActiveServer] = useState<ServerType>("vidsrc");
     const { addOrUpdateHistory } = useHistory();
 
     useEffect(() => {
@@ -36,7 +39,7 @@ export default function WatchPage({ params }: WatchPageProps) {
         ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber)
         : null;
 
-    // Record to watch history whenever movie or episode is loaded
+    // Record history
     useEffect(() => {
         if (movie) {
             addOrUpdateHistory(movie, isSeries ? currentEpNumber : undefined);
@@ -46,11 +49,38 @@ export default function WatchPage({ params }: WatchPageProps) {
     const displayYear = movie ? movie.year : "";
     const displayGenre = movie ? movie.genre?.join(" / ") : "";
 
-    const playerUrl = isSeries
-        ? `https://vidsrc.xyz/embed/tv/${id}/1/${currentEpNumber}`
-        : id.match(/^\d+$/)
-            ? `https://vidsrc.xyz/embed/movie/${id}`
-            : `https://www.youtube.com/embed/${id}?autoplay=1`;
+    // Multi-server URL templates
+    const getPlayerUrl = (server: ServerType): string => {
+        if (isSeries) {
+            switch (server) {
+                case "superembed":
+                    return `https://multiembed.to/embed.php?tmdb=1&id=${id}&s=1&e=${currentEpNumber}`;
+                case "embedsu":
+                    return `https://embed.su/embed/tv/${id}/1/${currentEpNumber}`;
+                case "vidsrc":
+                default:
+                    return `https://vidsrc.xyz/embed/tv/${id}/1/${currentEpNumber}`;
+            }
+        } else {
+            // Movie / Custom YouTube Fallback
+            const isNumericId = id.match(/^\d+$/);
+            if (!isNumericId) {
+                return `https://www.youtube.com/embed/${id}?autoplay=1`;
+            }
+
+            switch (server) {
+                case "superembed":
+                    return `https://multiembed.to/embed.php?tmdb=1&id=${id}`;
+                case "embedsu":
+                    return `https://embed.su/embed/movie/${id}`;
+                case "vidsrc":
+                default:
+                    return `https://vidsrc.xyz/embed/movie/${id}`;
+            }
+        }
+    };
+
+    const playerUrl = getPlayerUrl(activeServer);
 
     return (
         <main className="min-h-screen bg-[#09090b] text-white">
@@ -76,8 +106,63 @@ export default function WatchPage({ params }: WatchPageProps) {
                 />
             </div>
 
-            {/* Details Section */}
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            {/* Details Section & Server Switcher */}
+            <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+                {/* Server Switcher Panel */}
+                <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 md:p-6 space-y-4 shadow-xl">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <Server size={20} className="text-purple-400" />
+                            <h3 className="text-lg font-bold text-zinc-100">
+                                Pilih Server Pemutaran
+                            </h3>
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
+                            <AlertCircle size={12} className="text-zinc-500" />
+                            Pilih server alternatif jika video lambat/error.
+                        </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            onClick={() => setActiveServer("vidsrc")}
+                            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${activeServer === "vidsrc"
+                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
+                                    : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                                }`}
+                        >
+                            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+                            Server 1 (VidSrc)
+                            <span className="text-[10px] opacity-75 font-normal ml-1">Recomended</span>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveServer("superembed")}
+                            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${activeServer === "superembed"
+                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
+                                    : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                                }`}
+                        >
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
+                            Server 2 (SuperEmbed)
+                            <span className="text-[10px] opacity-75 font-normal ml-1">Alternatif</span>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveServer("embedsu")}
+                            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${activeServer === "embedsu"
+                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
+                                    : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                                }`}
+                        >
+                            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0" />
+                            Server 3 (EmbedSu)
+                            <span className="text-[10px] opacity-75 font-normal ml-1">Mirror</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Details Section */}
                 <div className="flex flex-col gap-8">
                     {/* Header Info */}
                     <div className="space-y-4">
