@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Play, Plus, Check, Star, Calendar, Film, Tv } from "lucide-react";
+import { X, Play, Plus, Check, Star, Calendar, Film, Tv, Video, RefreshCw } from "lucide-react";
 import { Movie } from "@/app/lib/movies";
 import { useWatchlist } from "@/app/context/watchlist-context";
 
@@ -15,6 +15,7 @@ interface MovieModalProps {
 
 export function MovieModal({ movie, onClose }: MovieModalProps) {
     const { isBookmarked, toggleWatchlist } = useWatchlist();
+    const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -32,10 +33,20 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
         };
     }, [movie, onClose]);
 
+    // Reset trailer playing state when movie details change
+    useEffect(() => {
+        setIsPlayingTrailer(false);
+    }, [movie]);
+
     if (!movie) return null;
 
     const bookmarked = isBookmarked(movie._id);
     const isSeries = movie.type === "series";
+
+    const handleClose = () => {
+        setIsPlayingTrailer(false);
+        onClose();
+    };
 
     return (
         <AnimatePresence>
@@ -45,7 +56,7 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="fixed inset-0 bg-black/80 backdrop-blur-sm"
                 />
 
@@ -59,8 +70,8 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                 >
                     {/* Close Button */}
                     <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 text-white/80 hover:text-white hover:bg-black/90 transition-colors"
+                        onClick={handleClose}
+                        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 text-white/80 hover:text-white hover:bg-black/90 transition-colors border border-white/10"
                         aria-label="Close modal"
                     >
                         <X size={20} />
@@ -68,40 +79,61 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
 
                     {/* Banner Image / Backdrop Header */}
                     <div className="relative h-64 sm:h-80 w-full overflow-hidden shrink-0 bg-zinc-900">
-                        <Image
-                            src={movie.poster}
-                            alt={movie.title}
-                            fill
-                            className="object-cover object-top opacity-75"
-                            sizes="(max-width: 768px) 100vw, 800px"
-                            quality={85}
-                            priority
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#121216] via-[#121216]/40 to-transparent" />
-
-                        {/* Title & Category Badges in Banner */}
-                        <div className="absolute bottom-4 left-6 right-6 flex flex-col gap-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-600/80 text-purple-100 backdrop-blur-md uppercase tracking-wider">
-                                    {isSeries ? <Tv size={12} /> : <Film size={12} />}
-                                    {movie.type || "movie"}
-                                </span>
-                                {movie.vote && (
-                                    <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-md">
-                                        <Star size={12} className="fill-amber-400 text-amber-400" />
-                                        IMDb {movie.vote}
-                                    </span>
-                                )}
-                                <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 backdrop-blur-md">
-                                    <Calendar size={12} />
-                                    {movie.year}
-                                </span>
+                        {isPlayingTrailer && movie.trailer ? (
+                            <div className="relative w-full h-full bg-black">
+                                <iframe
+                                    src={`https://www.youtube.com/embed/${movie.trailer}?autoplay=1&rel=0&modestbranding=1`}
+                                    title={`${movie.title} Trailer`}
+                                    className="w-full h-full object-cover"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                                <button
+                                    onClick={() => setIsPlayingTrailer(false)}
+                                    className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black text-xs font-semibold text-white/90 border border-white/10 transition-colors"
+                                >
+                                    <RefreshCw size={12} className="animate-spin-slow" />
+                                    Kembali ke Poster
+                                </button>
                             </div>
+                        ) : (
+                            <>
+                                <Image
+                                    src={movie.poster}
+                                    alt={movie.title}
+                                    fill
+                                    className="object-cover object-top opacity-75"
+                                    sizes="(max-width: 768px) 100vw, 800px"
+                                    quality={85}
+                                    priority
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#121216] via-[#121216]/40 to-transparent" />
 
-                            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
-                                {movie.title}
-                            </h2>
-                        </div>
+                                {/* Title & Category Badges in Banner */}
+                                <div className="absolute bottom-4 left-6 right-6 flex flex-col gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-600/80 text-purple-100 backdrop-blur-md uppercase tracking-wider">
+                                            {isSeries ? <Tv size={12} /> : <Film size={12} />}
+                                            {movie.type || "movie"}
+                                        </span>
+                                        {movie.vote && (
+                                            <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-md">
+                                                <Star size={12} className="fill-amber-400 text-amber-400" />
+                                                IMDb {movie.vote}
+                                            </span>
+                                        )}
+                                        <span className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-white/10 text-zinc-300 backdrop-blur-md">
+                                            <Calendar size={12} />
+                                            {movie.year}
+                                        </span>
+                                    </div>
+
+                                    <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">
+                                        {movie.title}
+                                    </h2>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Content Body */}
@@ -110,12 +142,22 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                         <div className="flex flex-wrap items-center gap-3">
                             <Link
                                 href={`/watch/${movie._id}`}
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/30"
                             >
                                 <Play size={20} className="fill-white" />
                                 Tonton Sekarang
                             </Link>
+
+                            {movie.trailer && !isPlayingTrailer && (
+                                <button
+                                    onClick={() => setIsPlayingTrailer(true)}
+                                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-colors"
+                                >
+                                    <Video size={18} />
+                                    Tonton Trailer
+                                </button>
+                            )}
 
                             <button
                                 onClick={() => toggleWatchlist(movie)}
@@ -166,7 +208,7 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                                         <Link
                                             key={ep.id}
                                             href={`/watch/${movie._id}?ep=${ep.episode_number}`}
-                                            onClick={onClose}
+                                            onClick={handleClose}
                                             className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 hover:bg-purple-600/20 border border-white/5 hover:border-purple-500/40 transition-colors group"
                                         >
                                             <div className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-600/30 text-purple-300 font-bold text-xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
