@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Movie } from "@/app/lib/movies";
+import { useToast } from "./toast-context";
 
 interface WatchlistContextType {
     watchlist: Movie[];
@@ -18,6 +19,7 @@ const STORAGE_KEY = "nontonyuk_watchlist";
 export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     const [watchlist, setWatchlist] = useState<Movie[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    const { showToast } = useToast();
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -46,20 +48,29 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     const addToWatchlist = (movie: Movie) => {
         setWatchlist((prev) => {
             if (prev.some((m) => m._id === movie._id)) return prev;
+            showToast(`"${movie.title}" ditambahkan ke Daftarku`, "success");
             return [movie, ...prev];
         });
     };
 
     const removeFromWatchlist = (movieId: string) => {
-        setWatchlist((prev) => prev.filter((m) => m._id !== movieId));
+        setWatchlist((prev) => {
+            const found = prev.find((m) => m._id === movieId);
+            if (found) {
+                showToast(`"${found.title}" dihapus dari Daftarku`, "info");
+            }
+            return prev.filter((m) => m._id !== movieId);
+        });
     };
 
     const toggleWatchlist = (movie: Movie) => {
         setWatchlist((prev) => {
             const exists = prev.some((m) => m._id === movie._id);
             if (exists) {
+                showToast(`"${movie.title}" dihapus dari Daftarku`, "info");
                 return prev.filter((m) => m._id !== movie._id);
             } else {
+                showToast(`"${movie.title}" ditambahkan ke Daftarku`, "success");
                 return [movie, ...prev];
             }
         });

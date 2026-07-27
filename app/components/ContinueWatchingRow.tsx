@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Play, Clock, X, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { useHistory } from "@/app/context/history-context";
 import { Movie } from "@/app/lib/movies";
+import { useToast } from "@/app/context/toast-context";
 
 interface ContinueWatchingRowProps {
     onOpenModal?: (movie: Movie) => void;
@@ -14,6 +15,7 @@ interface ContinueWatchingRowProps {
 
 export function ContinueWatchingRow({ onOpenModal }: ContinueWatchingRowProps) {
     const { history, removeFromHistory, clearHistory } = useHistory();
+    const { showToast } = useToast();
     const rowRef = useRef<HTMLDivElement>(null);
 
     const scroll = (direction: "left" | "right") => {
@@ -22,6 +24,16 @@ export function ContinueWatchingRow({ onOpenModal }: ContinueWatchingRowProps) {
             const scrollAmount = direction === "left" ? -window.innerWidth / 2 : window.innerWidth / 2;
             current.scrollBy({ left: scrollAmount, behavior: "smooth" });
         }
+    };
+
+    const handleClearHistory = () => {
+        clearHistory();
+        showToast("Riwayat menonton berhasil dibersihkan", "info");
+    };
+
+    const handleRemoveItem = (movieId: string, title: string) => {
+        removeFromHistory(movieId);
+        showToast(`"${title}" dihapus dari riwayat`, "info");
     };
 
     if (!history || history.length === 0) return null;
@@ -36,8 +48,8 @@ export function ContinueWatchingRow({ onOpenModal }: ContinueWatchingRowProps) {
                     </h2>
                 </div>
                 <button
-                    onClick={clearHistory}
-                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-rose-400 transition-colors px-2.5 py-1 rounded-md bg-white/5 border border-white/5"
+                    onClick={handleClearHistory}
+                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-rose-450 transition-colors px-2.5 py-1 rounded-md bg-white/5 border border-white/5 cursor-pointer"
                     title="Bersihkan Riwayat"
                 >
                     <RotateCcw size={12} />
@@ -92,7 +104,7 @@ export function ContinueWatchingRow({ onOpenModal }: ContinueWatchingRowProps) {
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            removeFromHistory(item.movieId);
+                                            handleRemoveItem(item.movieId, movie.title);
                                         }}
                                         className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white/70 hover:text-white hover:bg-rose-600 transition-colors z-20"
                                         title="Hapus dari riwayat"
