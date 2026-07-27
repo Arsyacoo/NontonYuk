@@ -2,16 +2,26 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Play, Info, Share2, Plus, Server, AlertCircle } from "lucide-react";
+import { ArrowLeft, Play, Info, Share2, Plus, Server, AlertCircle, Star, Trash2, Send, MessageSquare } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import { getAllMovies, Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
+import { useToast } from "@/app/context/toast-context";
 
 interface WatchPageProps {
     params: Promise<{ id: string }>;
 }
 
 type ServerType = "vidsrc" | "superembed" | "embedsu";
+
+interface Comment {
+    id: string;
+    name: string;
+    avatar: string;
+    rating: number;
+    text: string;
+    createdAt: number;
+}
 
 export default function WatchPage({ params }: WatchPageProps) {
     const { id } = use(params);
@@ -22,6 +32,14 @@ export default function WatchPage({ params }: WatchPageProps) {
     const [movie, setMovie] = useState<Movie | null>(null);
     const [activeServer, setActiveServer] = useState<ServerType>("vidsrc");
     const { addOrUpdateHistory } = useHistory();
+    const { showToast } = useToast();
+
+    // Local Comments States
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [commentName, setCommentName] = useState("");
+    const [commentText, setCommentText] = useState("");
+    const [commentRating, setCommentRating] = useState(5);
+    const [hoveredStar, setHoveredStar] = useState(0);
 
     useEffect(() => {
         async function fetchMovie() {
@@ -34,17 +52,36 @@ export default function WatchPage({ params }: WatchPageProps) {
         fetchMovie();
     }, [id]);
 
-    const isSeries = movie?.type === "series";
-    const currentEpisode = isSeries
-        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber)
-        : null;
+    // Load comments on mount & id change
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(`nontonyuk_comments_${id}`);
+            if (saved) {
+                setComments(JSON.parse(saved));
+            } else {
+                setComments([]);
+            }
+            // Preserve user name from previous session if exists
+            const savedName = localStorage.getItem("nontonyuk_username");
+            if (savedName) {
+                setCommentName(savedName);
+            }
+        } catch (e) {
+            console.error("Failed to load comments:", e);
+        }
+    }, [id]);
 
     // Record history
     useEffect(() => {
         if (movie) {
             addOrUpdateHistory(movie, isSeries ? currentEpNumber : undefined);
         }
-    }, [movie, currentEpNumber, isSeries]);
+    }, [movie, currentEpNumber]);
+
+    const isSeries = movie?.type === "series";
+    const currentEpisode = isSeries
+        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber)
+        : null;
 
     const displayYear = movie ? movie.year : "";
     const displayGenre = movie ? movie.genre?.join(" / ") : "";
@@ -62,7 +99,6 @@ export default function WatchPage({ params }: WatchPageProps) {
                     return `https://vidsrc.xyz/embed/tv/${id}/1/${currentEpNumber}`;
             }
         } else {
-            // Movie / Custom YouTube Fallback
             const isNumericId = id.match(/^\d+$/);
             if (!isNumericId) {
                 return `https://www.youtube.com/embed/${id}?autoplay=1`;
@@ -81,6 +117,53 @@ export default function WatchPage({ params }: WatchPageProps) {
     };
 
     const playerUrl = getPlayerUrl(activeServer);
+
+    // Comment Submission
+    const handleCommentSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!commentName.trim()) {
+            showToast("Nama Anda tidak boleh kosong", "warning");
+            return;
+        }
+        if (!commentText.trim()) {
+            showToast("Teks ulasan tidak boleh kosong", "warning");
+            return;
+        }
+
+        const newComment: Comment = {
+            id: Math.random().toString(36).substring(2, 9),
+            name: commentName.trim(),
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(commentName.trim())}`,
+            rating: commentRating,
+            text: commentText.trim(),
+            createdAt: Date.now(),
+        };
+
+        const updatedComments = [newComment, ...comments];
+        setComments(updatedComments);
+        localStorage.setItem(`nontonyuk_comments_${id}`, JSON.stringify(updatedComments));
+        localStorage.setItem("nontonyuk_username", commentName.trim());
+
+        // Reset
+        setCommentText("");
+        setCommentRating(5);
+        showToast("Ulasan Anda berhasil dikirim!", "success");
+    };
+
+    // Comment Deletion
+    const handleDeleteComment = (commentId: string) => {
+        const updated = comments.filter((c) => c.id !== commentId);
+        setComments(updated);
+        localStorage.setItem(`nontonyuk_comments_${id}`, JSON.stringify(updated));
+        showToast("Ulasan berhasil dihapus", "info");
+    };
+
+    // Calculate rating stats
+    const totalReviews = comments.length;
+    const avgRating =
+        totalReviews > 0
+            ? (comments.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1)
+            : null;
 
     return (
         <main className="min-h-screen bg-[#09090b] text-white">
@@ -163,7 +246,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                 </div>
 
                 {/* Details Section */}
-                <div className="flex flex-col gap-8">
+                <div className="flex flex-col gap-8 border-b border-white/10 pb-8">
                     {/* Header Info */}
                     <div className="space-y-4">
                         <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-2">
@@ -181,7 +264,8 @@ export default function WatchPage({ params }: WatchPageProps) {
                         )}
 
                         <div className="flex items-center gap-4 text-sm font-medium text-gray-400">
-                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                <Star size={12} className="fill-amber-400 text-amber-400" />
                                 IMDb {movie?.vote || "N/A"}
                             </span>
                             <span>{displayYear}</span>
@@ -232,6 +316,170 @@ export default function WatchPage({ params }: WatchPageProps) {
                             Nikmati pengalaman menonton sinematik resolusi tinggi di NontonYuk.
                             Disajikan khusus untuk para penggemar film, anime, dan serial pilihan.
                         </p>
+                    </div>
+                </div>
+
+                {/* Reviews & Comments Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
+                    {/* Left: Summary and Submission Form */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="flex items-center gap-2">
+                            <MessageSquare size={20} className="text-purple-400" />
+                            <h3 className="text-xl font-bold text-white">Diskusi & Ulasan</h3>
+                        </div>
+
+                        {/* Rating Stats Summary */}
+                        <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 space-y-3">
+                            <h4 className="text-sm font-semibold text-zinc-400">Rata-rata Rating Lokal</h4>
+                            {avgRating ? (
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl font-extrabold text-white">{avgRating}</span>
+                                    <span className="text-sm text-zinc-500">/ 5 bintang</span>
+                                    <div className="flex items-center text-amber-400 gap-0.5 ml-2">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                            <Star
+                                                key={i}
+                                                size={16}
+                                                className={i < Math.round(parseFloat(avgRating)) ? "fill-amber-400" : "text-zinc-700"}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-zinc-400">Belum ada ulasan lokal. Jadilah yang pertama!</p>
+                            )}
+                            <p className="text-xs text-zinc-500">Berdasarkan {totalReviews} ulasan tersimpan di browser ini.</p>
+                        </div>
+
+                        {/* Review Form */}
+                        <form onSubmit={handleCommentSubmit} className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 space-y-4">
+                            <h4 className="text-sm font-bold text-zinc-200">Tulis Ulasan Anda</h4>
+
+                            {/* Stars Rating Selector */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">Rating Anda</label>
+                                <div className="flex items-center gap-1.5">
+                                    {Array.from({ length: 5 }).map((_, i) => {
+                                        const starValue = i + 1;
+                                        const active = (hoveredStar || commentRating) >= starValue;
+                                        return (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                onClick={() => setCommentRating(starValue)}
+                                                onMouseEnter={() => setHoveredStar(starValue)}
+                                                onMouseLeave={() => setHoveredStar(0)}
+                                                className="transition-transform active:scale-90"
+                                            >
+                                                <Star
+                                                    size={24}
+                                                    className={`${active ? "fill-amber-400 text-amber-400" : "text-zinc-600"}`}
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Name Input */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">Nama</label>
+                                <input
+                                    type="text"
+                                    value={commentName}
+                                    onChange={(e) => setCommentName(e.target.value)}
+                                    placeholder="Masukkan nama Anda..."
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                />
+                            </div>
+
+                            {/* Text Input */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">Ulasan / Komentar</label>
+                                <textarea
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    placeholder="Tulis ulasan menarik Anda di sini..."
+                                    rows={3}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors shadow-lg shadow-purple-600/20"
+                            >
+                                <Send size={14} />
+                                Kirim Ulasan
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Right: Comments List */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <h4 className="text-lg font-bold text-white">Ulasan Pengguna ({comments.length})</h4>
+
+                        {comments.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-14 text-center border border-dashed border-white/15 rounded-2xl text-zinc-400 space-y-2 bg-zinc-900/10">
+                                <MessageSquare size={32} className="text-zinc-600" />
+                                <p className="text-sm font-semibold">Belum Ada Ulasan</p>
+                                <p className="text-xs text-zinc-500 max-w-xs">Ulasan yang Anda kirim akan tersimpan di sini secara instan.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 divide-y divide-white/5">
+                                {comments.map((comment) => (
+                                    <div key={comment.id} className="pt-4 first:pt-0 flex items-start gap-4 group">
+                                        {/* Avatar */}
+                                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-purple-900/40 border border-white/10 shrink-0">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={comment.avatar}
+                                                alt={comment.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+
+                                        {/* Content Box */}
+                                        <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h5 className="text-sm font-bold text-white truncate">{comment.name}</h5>
+                                                <button
+                                                    onClick={() => handleDeleteComment(comment.id)}
+                                                    className="text-zinc-500 hover:text-rose-450 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    title="Hapus ulasan"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+
+                                            {/* Rating Stars & Timestamp */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center text-amber-400 gap-0.5">
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            size={12}
+                                                            className={i < comment.rating ? "fill-amber-400" : "text-zinc-700"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="text-[10px] text-zinc-500">
+                                                    {new Date(comment.createdAt).toLocaleDateString("id-ID", {
+                                                        day: "numeric",
+                                                        month: "short",
+                                                        year: "numeric",
+                                                    })}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-sm text-zinc-350 leading-relaxed font-normal pt-1">
+                                                {comment.text}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
