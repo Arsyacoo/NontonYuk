@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Play, Info, Share2, Plus, Server, AlertCircle, Star, Trash2, Send, MessageSquare } from "lucide-react";
+import { ArrowLeft, Play, Info, Share2, Plus, Server, AlertCircle, Star, Trash2, Send, MessageSquare, Maximize2, Minimize2, Lightbulb, LightbulbOff } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import { getAllMovies, Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
@@ -33,6 +33,10 @@ export default function WatchPage({ params }: WatchPageProps) {
     const [activeServer, setActiveServer] = useState<ServerType>("vidsrc");
     const { addOrUpdateHistory } = useHistory();
     const { showToast } = useToast();
+
+    // Player Custom Modes
+    const [isTheaterMode, setIsTheaterMode] = useState(false);
+    const [isLightsDimmed, setIsLightsDimmed] = useState(false);
 
     // Local Comments States
     const [comments, setComments] = useState<Comment[]>([]);
@@ -78,9 +82,27 @@ export default function WatchPage({ params }: WatchPageProps) {
         }
     }, [movie, currentEpNumber]);
 
+    // Listen to ESC key to turn lights back on
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && isLightsDimmed) {
+                setIsLightsDimmed(false);
+                showToast("Lampu dinyalakan", "info");
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isLightsDimmed]);
+
     const isSeries = movie?.type === "series";
     const currentEpisode = isSeries
         ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber)
+        : null;
+
+    // Next Episode calculation
+    const hasNextEpisode = isSeries && movie?.episodes && currentEpNumber < movie.episodes.length;
+    const nextEpisode = hasNextEpisode
+        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber + 1)
         : null;
 
     const displayYear = movie ? movie.year : "";
@@ -165,18 +187,42 @@ export default function WatchPage({ params }: WatchPageProps) {
             ? (comments.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1)
             : null;
 
+    const toggleTheaterMode = () => {
+        setIsTheaterMode(!isTheaterMode);
+        showToast(isTheaterMode ? "Keluar dari Mode Bioskop" : "Masuk ke Mode Bioskop", "info");
+    };
+
+    const toggleLightsDimmed = () => {
+        setIsLightsDimmed(!isLightsDimmed);
+        showToast(isLightsDimmed ? "Lampu dinyalakan" : "Lampu diredupkan. Tekan ESC untuk menyalakan kembali", "info");
+    };
+
     return (
-        <main className="min-h-screen bg-[#09090b] text-white">
+        <main className="min-h-screen bg-[#09090b] text-white relative">
+            {/* Dim Lights Background Overlay */}
+            {isLightsDimmed && (
+                <div
+                    onClick={toggleLightsDimmed}
+                    className="fixed inset-0 bg-black/95 z-[90] cursor-pointer transition-opacity duration-300"
+                    title="Klik di mana saja untuk menyalakan lampu"
+                />
+            )}
+
             {/* Back Button */}
             <Link
                 href="/"
-                className="fixed top-24 left-6 z-50 p-3 bg-black/50 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/10"
+                className="fixed top-24 left-6 z-[95] p-3 bg-black/50 backdrop-blur-md rounded-full hover:bg-white/20 transition-colors border border-white/10"
             >
                 <ArrowLeft size={24} />
             </Link>
 
-            {/* Cinema Mode Player */}
-            <div className="relative w-full h-[60vh] md:h-[85vh] lg:h-[90vh] bg-black shadow-2xl shadow-purple-900/20">
+            {/* Cinema Mode Player Container */}
+            <div
+                className={`relative bg-black transition-all duration-300 shadow-2xl shadow-purple-900/20 z-[95] ${isTheaterMode
+                        ? "w-full h-[75vh] md:h-[90vh] lg:h-[95vh] max-w-none"
+                        : "max-w-7xl mx-auto rounded-none md:rounded-2xl overflow-hidden mt-0 md:mt-24 w-full h-[55vh] md:h-[75vh] border border-white/10"
+                    }`}
+            >
                 <iframe
                     key={playerUrl}
                     width="100%"
@@ -190,7 +236,7 @@ export default function WatchPage({ params }: WatchPageProps) {
             </div>
 
             {/* Details Section & Server Switcher */}
-            <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+            <div className="max-w-7xl mx-auto px-6 py-8 space-y-8 relative z-10">
                 {/* Server Switcher Panel */}
                 <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 md:p-6 space-y-4 shadow-xl">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -206,44 +252,91 @@ export default function WatchPage({ params }: WatchPageProps) {
                         </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button
-                            onClick={() => setActiveServer("vidsrc")}
-                            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${activeServer === "vidsrc"
-                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
-                                    : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
-                                }`}
-                        >
-                            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-                            Server 1 (VidSrc)
-                            <span className="text-[10px] opacity-75 font-normal ml-1">Recomended</span>
-                        </button>
+                    <div className="flex flex-wrap items-center gap-4">
+                        {/* Server Buttons */}
+                        <div className="flex flex-wrap gap-2.5 flex-1 min-w-[280px]">
+                            <button
+                                onClick={() => setActiveServer("vidsrc")}
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${activeServer === "vidsrc"
+                                        ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
+                                        : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                                    }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                Server 1 (VidSrc)
+                            </button>
 
-                        <button
-                            onClick={() => setActiveServer("superembed")}
-                            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${activeServer === "superembed"
-                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
-                                    : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
-                                }`}
-                        >
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0" />
-                            Server 2 (SuperEmbed)
-                            <span className="text-[10px] opacity-75 font-normal ml-1">Alternatif</span>
-                        </button>
+                            <button
+                                onClick={() => setActiveServer("superembed")}
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${activeServer === "superembed"
+                                        ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
+                                        : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                                    }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                                Server 2 (SuperEmbed)
+                            </button>
 
-                        <button
-                            onClick={() => setActiveServer("embedsu")}
-                            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${activeServer === "embedsu"
-                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
-                                    : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
-                                }`}
-                        >
-                            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0" />
-                            Server 3 (EmbedSu)
-                            <span className="text-[10px] opacity-75 font-normal ml-1">Mirror</span>
-                        </button>
+                            <button
+                                onClick={() => setActiveServer("embedsu")}
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${activeServer === "embedsu"
+                                        ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
+                                        : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
+                                    }`}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-sky-400 shrink-0" />
+                                Server 3 (EmbedSu)
+                            </button>
+                        </div>
+
+                        {/* Player Mode Buttons */}
+                        <div className="flex items-center gap-2 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 w-full sm:w-auto justify-end">
+                            <button
+                                onClick={toggleTheaterMode}
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${isTheaterMode
+                                        ? "bg-purple-600/25 border-purple-500/50 text-purple-300"
+                                        : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+                                    }`}
+                                title={isTheaterMode ? "Matikan Mode Bioskop" : "Nyalakan Mode Bioskop"}
+                            >
+                                {isTheaterMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                <span>Bioskop</span>
+                            </button>
+
+                            <button
+                                onClick={toggleLightsDimmed}
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${isLightsDimmed
+                                        ? "bg-yellow-500/25 border-yellow-500/40 text-yellow-300"
+                                        : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+                                    }`}
+                                title={isLightsDimmed ? "Nyalakan Lampu" : "Redupkan Lampu"}
+                            >
+                                {isLightsDimmed ? <Lightbulb size={16} /> : <LightbulbOff size={16} />}
+                                <span>Lampu</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {/* Auto-Play Next Episode Banner */}
+                {isSeries && nextEpisode && (
+                    <div className="bg-gradient-to-r from-purple-950/20 via-zinc-900/60 to-zinc-900/30 border border-purple-500/20 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+                        <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
+                                Episode Selanjutnya
+                            </span>
+                            <h4 className="text-base sm:text-lg font-bold text-white">
+                                Episode {nextEpisode.episode_number}: {nextEpisode.title}
+                            </h4>
+                        </div>
+                        <Link
+                            href={`/watch/${id}?ep=${nextEpisode.episode_number}`}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-all shadow-lg shadow-purple-600/20 active:scale-95 cursor-pointer"
+                        >
+                            <Play size={14} className="fill-white" /> Putar Episode {nextEpisode.episode_number}
+                        </Link>
+                    </div>
+                )}
 
                 {/* Details Section */}
                 <div className="flex flex-col gap-8 border-b border-white/10 pb-8">
@@ -369,11 +462,11 @@ export default function WatchPage({ params }: WatchPageProps) {
                                                 onClick={() => setCommentRating(starValue)}
                                                 onMouseEnter={() => setHoveredStar(starValue)}
                                                 onMouseLeave={() => setHoveredStar(0)}
-                                                className="transition-transform active:scale-90"
+                                                className="transition-transform active:scale-90 text-zinc-650"
                                             >
                                                 <Star
                                                     size={24}
-                                                    className={`${active ? "fill-amber-400 text-amber-400" : "text-zinc-600"}`}
+                                                    className={`${active ? "fill-amber-400 text-amber-400" : "text-zinc-650"}`}
                                                 />
                                             </button>
                                         );
@@ -407,7 +500,7 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                             <button
                                 type="submit"
-                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors shadow-lg shadow-purple-600/20"
+                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors shadow-lg shadow-purple-600/20 cursor-pointer"
                             >
                                 <Send size={14} />
                                 Kirim Ulasan
@@ -445,7 +538,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                                                 <h5 className="text-sm font-bold text-white truncate">{comment.name}</h5>
                                                 <button
                                                     onClick={() => handleDeleteComment(comment.id)}
-                                                    className="text-zinc-500 hover:text-rose-450 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="text-zinc-500 hover:text-rose-455 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                                     title="Hapus ulasan"
                                                 >
                                                     <Trash2 size={13} />
