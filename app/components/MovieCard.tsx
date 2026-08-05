@@ -57,7 +57,7 @@ export function MovieCard({ id, title, year, rating, posterUrl, movie, onOpenMod
                 <motion.div
                     whileHover={{ scale: 1.04 }}
                     transition={{ duration: 0.25, ease: "easeOut" }}
-                    className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-lg group-hover:shadow-purple-500/20"
+                    className="relative aspect-[2/3] w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-lg transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.25)] group-hover:border-purple-500/40 shimmer-sweep"
                 >
                     <Image
                         src={imgSrc}

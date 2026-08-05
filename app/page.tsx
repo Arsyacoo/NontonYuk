@@ -13,17 +13,17 @@ function unique(movies: Movie[]) {
   });
 }
 
-// Skeleton Loading State
+// Skeleton Loading State with Premium Shimmer Effect
 function MoviesLoading() {
   return (
     <div className="min-h-screen bg-[#09090b] space-y-12 pt-28">
-      <div className="h-[60vh] w-full bg-zinc-900 animate-pulse rounded-2xl mx-auto max-w-7xl" />
+      <div className="h-[60vh] w-full shimmer-bg rounded-2xl mx-auto max-w-7xl border border-white/5" />
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="space-y-4 max-w-7xl mx-auto px-6">
-          <div className="h-8 w-48 bg-zinc-800 rounded animate-pulse" />
+          <div className="h-8 w-48 rounded shimmer-bg" />
           <div className="flex gap-4 overflow-hidden">
             {Array.from({ length: 6 }).map((_, k) => (
-              <div key={k} className="min-w-[180px] h-[280px] bg-zinc-900 rounded-xl animate-pulse" />
+              <div key={k} className="min-w-[180px] h-[280px] rounded-xl shimmer-bg border border-white/5" />
             ))}
           </div>
         </div>
