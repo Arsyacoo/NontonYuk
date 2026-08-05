@@ -7,6 +7,7 @@ import { MovieModal } from "./MovieModal";
 import { ContinueWatchingRow } from "./ContinueWatchingRow";
 import { Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
+import { useWatchlist } from "@/app/context/watchlist-context";
 
 interface HomeClientProps {
     allMovies: Movie[];
@@ -28,6 +29,7 @@ export function HomeClient({
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [recommendations, setRecommendations] = useState<Movie[]>([]);
     const { history } = useHistory();
+    const { watchlist } = useWatchlist();
 
     const handleOpenModal = (movie: Movie) => {
         setSelectedMovie(movie);
@@ -96,6 +98,15 @@ export function HomeClient({
             <div className="relative z-30 -mt-16 md:-mt-24 space-y-8 pb-20">
                 {/* Continue Watching Section */}
                 <ContinueWatchingRow onOpenModal={handleOpenModal} />
+
+                {/* Watchlist Section */}
+                {watchlist.length > 0 && (
+                    <MovieRow
+                        title="Daftar Tontonan Saya 🔖"
+                        movies={watchlist}
+                        onOpenModal={handleOpenModal}
+                    />
+                )}
 
                 {/* Personalized Recommendations Row */}
                 {recommendations.length > 0 && (
