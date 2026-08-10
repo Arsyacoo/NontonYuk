@@ -7,10 +7,12 @@ import { useWatchlist } from "@/app/context/watchlist-context";
 import { MovieCard } from "@/app/components/MovieCard";
 import { MovieModal } from "@/app/components/MovieModal";
 import { Movie } from "@/app/lib/movies";
+import { useLanguage } from "@/app/context/language-context";
 
 export default function WatchlistPage() {
     const { watchlist, removeFromWatchlist } = useWatchlist();
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+    const { t } = useLanguage();
 
     return (
         <main className="min-h-screen bg-[#09090b] text-white pt-28 pb-20 px-4 md:px-12">
@@ -23,11 +25,11 @@ export default function WatchlistPage() {
                                 <Bookmark size={24} />
                             </div>
                             <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white">
-                                Daftarku
+                                {t("watchlist.title")}
                             </h1>
                         </div>
                         <p className="text-zinc-400 text-sm md:text-base">
-                            Koleksi film, anime, dan serial favorit yang Anda simpan untuk ditonton nanti.
+                            {t("watchlist.subtitle")}
                         </p>
                     </div>
 
@@ -36,7 +38,7 @@ export default function WatchlistPage() {
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-medium text-zinc-300 transition-colors"
                     >
                         <ArrowLeft size={16} />
-                        Kembali ke Beranda
+                        {t("watchlist.back_home")}
                     </Link>
                 </div>
 
@@ -47,29 +49,29 @@ export default function WatchlistPage() {
                             <Film size={36} />
                         </div>
                         <div className="space-y-2 max-w-md">
-                            <h3 className="text-2xl font-bold text-white">Belum Ada Film di Daftarku</h3>
+                            <h3 className="text-2xl font-bold text-white">{t("watchlist.empty_title")}</h3>
                             <p className="text-zinc-400 text-sm leading-relaxed">
-                                Jelajahi ribuan judul film dan tekan ikon <span className="text-purple-400 font-semibold">+ Daftarku</span> untuk mencatat tayangan yang ingin Anda tonton.
+                                {t("watchlist.empty_desc")}
                             </p>
                         </div>
                         <Link
                             href="/"
-                            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg shadow-purple-600/30 transition-all"
+                            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
                         >
-                            Eksplor Film Sekarang
+                            {t("watchlist.empty_btn")}
                         </Link>
                     </div>
                 ) : (
                     <div className="space-y-4 pt-4">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-zinc-400">
-                                Menampilkan {watchlist.length} film tersimpan
+                                {t("watchlist.show_count", { count: watchlist.length })}
                             </span>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
                             {watchlist.map((movie) => (
-                                <div key={movie._id} className="relative group">
+                                <div key={movie._id} className="relative group animate-fade-in">
                                     <MovieCard
                                         id={movie._id}
                                         title={movie.title}
@@ -82,8 +84,8 @@ export default function WatchlistPage() {
                                     {/* Hapus Button */}
                                     <button
                                         onClick={() => removeFromWatchlist(movie._id)}
-                                        className="absolute -top-2 -right-2 z-30 flex items-center justify-center p-2 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-lg transition-transform hover:scale-110"
-                                        title="Hapus dari Daftarku"
+                                        className="absolute -top-2 -right-2 z-30 flex items-center justify-center p-2 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-lg transition-transform hover:scale-110 cursor-pointer"
+                                        title={t("card.toast.remove_watchlist")}
                                     >
                                         <Trash2 size={14} />
                                     </button>

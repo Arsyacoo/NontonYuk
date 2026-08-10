@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Filter, RefreshCw, Star, Film, Tv, Sliders, ChevronDown } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search, Filter, RefreshCw, Film, Sliders, ChevronDown } from "lucide-react";
 import { Movie, getAllMovies } from "@/app/lib/movies";
 import { MovieGrid } from "@/app/components/MovieGrid";
 import { MovieCard } from "@/app/components/MovieCard";
 import { MovieModal } from "@/app/components/MovieModal";
+import { useLanguage } from "@/app/context/language-context";
 
 const GENRES = [
     "action",
@@ -20,24 +21,8 @@ const GENRES = [
     "crime",
 ];
 
-const YEARS = [
-    { label: "Semua Tahun", value: "all" },
-    { label: "2024", value: "2024" },
-    { label: "2023", value: "2023" },
-    { label: "2022", value: "2022" },
-    { label: "Era 2020-an", value: "2020s" },
-    { label: "Era 2010-an", value: "2010s" },
-];
-
-const RATINGS = [
-    { label: "Semua Rating", value: "all" },
-    { label: "★ 8.5+ Terbaik", value: "8.5" },
-    { label: "★ 8.0+ Populer", value: "8.0" },
-    { label: "★ 7.5+ Bagus", value: "7.5" },
-    { label: "★ 7.0+ Layak Tonton", value: "7.0" },
-];
-
 export default function ExplorePage() {
+    const { t } = useLanguage();
     const [allMovies, setAllMovies] = useState<Movie[]>([]);
     const [filteredMovies, setFilteredMovies] = useState<Movie[]>([]);
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -50,6 +35,30 @@ export default function ExplorePage() {
     const [selectedYear, setSelectedYear] = useState("all");
     const [selectedRating, setSelectedRating] = useState("all");
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+    // Localized options
+    const YEARS = useMemo(() => [
+        { label: t("explore.year_all"), value: "all" },
+        { label: "2024", value: "2024" },
+        { label: "2023", value: "2023" },
+        { label: "2022", value: "2022" },
+        { label: t("explore.year_2020s"), value: "2020s" },
+        { label: t("explore.year_2010s"), value: "2010s" },
+    ], [t]);
+
+    const RATINGS = useMemo(() => [
+        { label: t("explore.rating_all"), value: "all" },
+        { label: t("explore.rating_best"), value: "8.5" },
+        { label: t("explore.rating_pop"), value: "8.0" },
+        { label: t("explore.rating_good"), value: "7.5" },
+        { label: t("explore.rating_decent"), value: "7.0" },
+    ], [t]);
+
+    const mediaTypes = useMemo(() => [
+        { label: t("explore.type_all"), value: "all" },
+        { label: t("explore.type_movie"), value: "movie" },
+        { label: t("explore.type_series"), value: "series" },
+    ] as const, [t]);
 
     useEffect(() => {
         async function fetchMovies() {
@@ -124,28 +133,28 @@ export default function ExplorePage() {
         <main className="min-h-screen bg-[#09090b] text-white pt-28 pb-20 px-4 md:px-12">
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="border-b border-white/10 pb-6 space-y-2">
+                <div className="border-b border-white/10 pb-6 space-y-2 animate-fade-in">
                     <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center p-2.5 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
                             <Sliders size={24} />
                         </div>
                         <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white">
-                            Eksplorasi Film
+                            {t("explore.title")}
                         </h1>
                     </div>
                     <p className="text-zinc-400 text-sm md:text-base">
-                        Gunakan filter canggih di bawah untuk menemukan tayangan terfavorit Anda.
+                        {t("explore.subtitle")}
                     </p>
                 </div>
 
                 {/* Collapsible Mobile Filters Button */}
                 <button
                     onClick={() => setShowMobileFilters(!showMobileFilters)}
-                    className="md:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-900 border border-white/10 text-sm font-semibold"
+                    className="md:hidden w-full flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-900 border border-white/10 text-sm font-semibold cursor-pointer"
                 >
                     <span className="flex items-center gap-2">
                         <Filter size={16} className="text-purple-400" />
-                        Filter Pencarian
+                        {t("explore.filter_btn")}
                     </span>
                     <ChevronDown
                         size={16}
@@ -162,17 +171,17 @@ export default function ExplorePage() {
                             <h3 className="font-bold text-zinc-200 text-base">Filter</h3>
                             <button
                                 onClick={handleResetFilters}
-                                className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 font-semibold"
+                                className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 font-semibold cursor-pointer"
                             >
                                 <RefreshCw size={12} />
-                                Reset
+                                {t("explore.reset")}
                             </button>
                         </div>
 
                         {/* Search Input */}
                         <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                                Cari Judul
+                                {t("explore.search_label")}
                             </label>
                             <div className="relative">
                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
@@ -180,7 +189,7 @@ export default function ExplorePage() {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Ketik judul film..."
+                                    placeholder={t("explore.search_placeholder")}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                                 />
                             </div>
@@ -189,25 +198,19 @@ export default function ExplorePage() {
                         {/* Type Select */}
                         <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                                Jenis Tayangan
+                                {t("explore.type_label")}
                             </label>
                             <div className="grid grid-cols-3 gap-2">
-                                {(
-                                    [
-                                        { label: "Semua", value: "all" },
-                                        { label: "Film", value: "movie" },
-                                        { label: "Serial", value: "series" },
-                                    ] as const
-                                ).map((t) => (
+                                {mediaTypes.map((tItem) => (
                                     <button
-                                        key={t.value}
-                                        onClick={() => setSelectedType(t.value)}
-                                        className={`py-2 rounded-lg text-xs font-semibold border transition-all ${selectedType === t.value
+                                        key={tItem.value}
+                                        onClick={() => setSelectedType(tItem.value)}
+                                        className={`py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${selectedType === tItem.value
                                                 ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/10"
                                                 : "bg-white/5 border-transparent text-zinc-400 hover:bg-white/10 hover:text-white"
                                             }`}
                                     >
-                                        {t.label}
+                                        {tItem.label}
                                     </button>
                                 ))}
                             </div>
@@ -216,7 +219,7 @@ export default function ExplorePage() {
                         {/* Year Selector */}
                         <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                                Tahun Rilis
+                                {t("explore.year_label")}
                             </label>
                             <select
                                 value={selectedYear}
@@ -234,7 +237,7 @@ export default function ExplorePage() {
                         {/* Rating Selector */}
                         <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                                Rating IMDb
+                                {t("explore.rating_label")}
                             </label>
                             <select
                                 value={selectedRating}
@@ -252,7 +255,7 @@ export default function ExplorePage() {
                         {/* Genres Multi-select checkboxes */}
                         <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                                Pilih Genre
+                                {t("explore.genre_label")}
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                                 {GENRES.map((genre) => {
@@ -261,7 +264,7 @@ export default function ExplorePage() {
                                         <button
                                             key={genre}
                                             onClick={() => handleGenreToggle(genre)}
-                                            className={`py-1.5 px-3 text-left rounded-lg text-xs font-semibold border transition-all capitalize truncate ${active
+                                            className={`py-1.5 px-3 text-left rounded-lg text-xs font-semibold border transition-all capitalize truncate cursor-pointer ${active
                                                     ? "bg-purple-600/30 border-purple-500/50 text-purple-300 font-bold"
                                                     : "bg-white/5 border-transparent text-zinc-400 hover:bg-white/10 hover:text-white"
                                                 }`}
@@ -279,15 +282,15 @@ export default function ExplorePage() {
                         <div className="flex items-center justify-between text-sm text-zinc-400">
                             <span>
                                 {loading
-                                    ? "Memuat film..."
-                                    : `Menampilkan ${filteredMovies.length} hasil ditemukan`}
+                                    ? t("explore.loading")
+                                    : t("explore.results_count", { count: filteredMovies.length })}
                             </span>
                         </div>
 
                         {loading ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                                 {Array.from({ length: 8 }).map((_, i) => (
-                                    <div key={i} className="aspect-[2/3] bg-zinc-900 animate-pulse rounded-xl" />
+                                    <div key={i} className="aspect-[2/3] shimmer-bg rounded-xl border border-white/5" />
                                 ))}
                             </div>
                         ) : filteredMovies.length > 0 ? (
@@ -311,16 +314,16 @@ export default function ExplorePage() {
                                     <Film size={28} />
                                 </div>
                                 <div className="space-y-1">
-                                    <h4 className="text-xl font-bold text-white">Tidak Ada Hasil Cocok</h4>
+                                    <h4 className="text-xl font-bold text-white">{t("explore.empty_title")}</h4>
                                     <p className="text-zinc-400 text-sm max-w-sm">
-                                        Coba kurangi filter pilihan Anda atau ganti kata kunci pencarian.
+                                        {t("explore.empty_desc")}
                                     </p>
                                 </div>
                                 <button
                                     onClick={handleResetFilters}
-                                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition-colors"
+                                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-sm font-semibold transition-colors cursor-pointer"
                                 >
-                                    Reset Semua Filter
+                                    {t("explore.empty_btn")}
                                 </button>
                             </div>
                         )}

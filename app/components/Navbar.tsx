@@ -4,22 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Menu, X, Search, Bookmark, Star, Film, Tv, ChevronRight } from "lucide-react";
+import { Menu, X, Search, Bookmark, Star, ChevronRight, Globe } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWatchlist } from "@/app/context/watchlist-context";
 import { getAllMovies, Movie } from "@/app/lib/movies";
-
-const NAV_ITEMS = [
-    { label: "Beranda", href: "/" },
-    { label: "Eksplor", href: "/explore" },
-    { label: "Daftarku", href: "/watchlist", isWatchlist: true },
-    { label: "Trending", href: "/genre/trending" },
-    { label: "Action", href: "/genre/action" },
-    { label: "Anime", href: "/genre/anime" },
-    { label: "Sci-Fi", href: "/genre/sci-fi" },
-    { label: "Indo Dub", href: "/genre/indo-dub" },
-];
+import { useLanguage } from "@/app/context/language-context";
+import { useToast } from "@/app/context/toast-context";
 
 export function Navbar() {
     const pathname = usePathname();
@@ -33,6 +24,29 @@ export function Navbar() {
 
     const searchRef = useRef<HTMLDivElement>(null);
     const { watchlist } = useWatchlist();
+    const { locale, setLocale, t } = useLanguage();
+    const { showToast } = useToast();
+
+    // Define navigation items dynamically to support translation
+    const navItems = [
+        { label: t("nav.beranda"), href: "/" },
+        { label: t("nav.eksplor"), href: "/explore" },
+        { label: t("nav.daftarku"), href: "/watchlist", isWatchlist: true },
+        { label: t("nav.trending"), href: "/genre/trending" },
+        { label: t("nav.action"), href: "/genre/action" },
+        { label: t("nav.anime"), href: "/genre/anime" },
+        { label: t("nav.scifi"), href: "/genre/sci-fi" },
+        { label: t("nav.indodub"), href: "/genre/indo-dub" },
+    ];
+
+    const handleLanguageToggle = () => {
+        const nextLocale = locale === "id" ? "en" : "id";
+        setLocale(nextLocale);
+        showToast(
+            nextLocale === "id" ? "Bahasa diubah ke Indonesia" : "Language changed to English",
+            "success"
+        );
+    };
 
     // Fetch all movies once for instant live autocomplete
     useEffect(() => {
@@ -128,7 +142,7 @@ export function Navbar() {
 
                     {/* Desktop Nav */}
                     <nav className="hidden xl:flex items-center gap-6">
-                        {NAV_ITEMS.map((item) => (
+                        {navItems.map((item) => (
                             <Link
                                 key={item.label}
                                 href={item.href}
@@ -158,7 +172,7 @@ export function Navbar() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onFocus={() => searchQuery.trim() && setShowDropdown(true)}
-                                placeholder="Cari film, anime, series..."
+                                placeholder={t("nav.search_placeholder")}
                                 className="w-full bg-white/10 border border-white/10 rounded-full py-2 pl-10 pr-8 text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                             />
                             {searchQuery && (
@@ -188,7 +202,7 @@ export function Navbar() {
                                     {liveResults.length > 0 ? (
                                         <div className="py-2 divide-y divide-white/5">
                                             <div className="px-4 py-1.5 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-                                                Hasil Instant ({liveResults.length})
+                                                {t("explore.results_count", { count: liveResults.length })}
                                             </div>
                                             {liveResults.map((movie) => (
                                                 <div
@@ -231,14 +245,14 @@ export function Navbar() {
                                             {/* View All Search Results Footer */}
                                             <button
                                                 onClick={handleSearchSubmit}
-                                                className="w-full text-center py-2.5 text-xs font-semibold text-purple-400 hover:text-purple-300 bg-white/5 hover:bg-purple-600/30 transition-colors"
+                                                className="w-full text-center py-2.5 text-xs font-semibold text-purple-400 hover:text-purple-300 bg-white/5 hover:bg-purple-600/30 transition-colors cursor-pointer"
                                             >
-                                                Lihat semua hasil untuk "{searchQuery}" →
+                                                {locale === "id" ? `Lihat semua hasil untuk "${searchQuery}" →` : `View all results for "${searchQuery}" →`}
                                             </button>
                                         </div>
                                     ) : (
                                         <div className="p-4 text-center text-xs text-zinc-400">
-                                            Tidak ada film ditemukan untuk "{searchQuery}"
+                                            {t("search.empty")} "{searchQuery}"
                                         </div>
                                     )}
                                 </motion.div>
@@ -248,7 +262,7 @@ export function Navbar() {
                         <Link
                             href="/watchlist"
                             className="xl:hidden relative p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/10 shrink-0"
-                            title="Daftarku"
+                            title={t("watchlist.title")}
                         >
                             <Bookmark size={18} className="text-purple-400" />
                             {watchlist.length > 0 && (
@@ -259,13 +273,25 @@ export function Navbar() {
                         </Link>
                     </div>
 
-                    {/* Mobile Menu Button */}
-                    <button
-                        className="xl:hidden text-white ml-auto md:ml-0 p-2 rounded-lg bg-white/5 border border-white/10"
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    >
-                        {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-                    </button>
+                    {/* Language Switcher - Global Desktop & Mobile */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            onClick={handleLanguageToggle}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-bold text-zinc-300 hover:text-white transition-all cursor-pointer active:scale-95"
+                            title={locale === "id" ? "Switch Language to English" : "Ubah Bahasa ke Indonesia"}
+                        >
+                            <Globe size={13} className="text-purple-400" />
+                            <span className="uppercase">{locale}</span>
+                        </button>
+
+                        {/* Mobile Menu Button */}
+                        <button
+                            className="xl:hidden text-white p-2 rounded-lg bg-white/5 border border-white/10 cursor-pointer"
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        >
+                            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -285,13 +311,13 @@ export function Navbar() {
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Cari film, anime, series..."
+                                placeholder={t("nav.search_placeholder")}
                                 className="w-full bg-white/10 border border-white/10 rounded-full py-3 pl-10 pr-4 text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                             />
                         </form>
 
-                        <nav className="flex flex-col gap-2">
-                            {NAV_ITEMS.map((item) => (
+                        <nav className="flex flex-col gap-2 pb-10">
+                            {navItems.map((item) => (
                                 <Link
                                     key={item.label}
                                     href={item.href}
@@ -307,7 +333,7 @@ export function Navbar() {
                                     </span>
                                     {item.isWatchlist && watchlist.length > 0 && (
                                         <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white text-xs font-bold">
-                                            {watchlist.length} film
+                                            {watchlist.length} {t("nav.items_suffix")}
                                         </span>
                                     )}
                                 </Link>

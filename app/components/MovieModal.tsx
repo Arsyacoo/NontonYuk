@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Play, Plus, Check, Star, Calendar, Film, Tv, Video, RefreshCw } from "lucide-react";
 import { Movie } from "@/app/lib/movies";
 import { useWatchlist } from "@/app/context/watchlist-context";
+import { useLanguage } from "@/app/context/language-context";
 
 interface MovieModalProps {
     movie: Movie | null;
@@ -16,6 +17,7 @@ interface MovieModalProps {
 export function MovieModal({ movie, onClose }: MovieModalProps) {
     const { isBookmarked, toggleWatchlist } = useWatchlist();
     const [isPlayingTrailer, setIsPlayingTrailer] = useState(false);
+    const { t } = useLanguage();
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -71,7 +73,7 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                     {/* Close Button */}
                     <button
                         onClick={handleClose}
-                        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 text-white/80 hover:text-white hover:bg-black/90 transition-colors border border-white/10"
+                        className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 text-white/80 hover:text-white hover:bg-black/90 transition-colors border border-white/10 cursor-pointer"
                         aria-label="Close modal"
                     >
                         <X size={20} />
@@ -90,10 +92,10 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                                 />
                                 <button
                                     onClick={() => setIsPlayingTrailer(false)}
-                                    className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black text-xs font-semibold text-white/90 border border-white/10 transition-colors"
+                                    className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black text-xs font-semibold text-white/90 border border-white/10 transition-colors cursor-pointer"
                                 >
                                     <RefreshCw size={12} className="animate-spin-slow" />
-                                    Kembali ke Poster
+                                    {t("modal.close_trailer")}
                                 </button>
                             </div>
                         ) : (
@@ -143,31 +145,31 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                             <Link
                                 href={`/watch/${movie._id}`}
                                 onClick={handleClose}
-                                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/30"
+                                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-600/30 cursor-pointer"
                             >
                                 <Play size={20} className="fill-white" />
-                                Tonton Sekarang
+                                {t("modal.play_now")}
                             </Link>
 
                             {movie.trailer && !isPlayingTrailer && (
                                 <button
                                     onClick={() => setIsPlayingTrailer(true)}
-                                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-colors"
+                                    className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold border border-white/10 transition-colors cursor-pointer"
                                 >
                                     <Video size={18} />
-                                    Tonton Trailer
+                                    {t("modal.watch_trailer")}
                                 </button>
                             )}
 
                             <button
                                 onClick={() => toggleWatchlist(movie)}
-                                className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all ${bookmarked
+                                className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${bookmarked
                                         ? "bg-purple-950/40 border-purple-500/50 text-purple-300"
                                         : "bg-white/10 border-white/10 text-white hover:bg-white/20"
                                     }`}
                             >
                                 {bookmarked ? <Check size={18} className="text-purple-400" /> : <Plus size={18} />}
-                                {bookmarked ? "Tersimpan di Daftarku" : "Tambah ke Daftarku"}
+                                {bookmarked ? t("modal.in_watchlist") : t("modal.add_watchlist")}
                             </button>
                         </div>
 
@@ -187,9 +189,9 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
 
                         {/* Overview / Description */}
                         <div className="space-y-2">
-                            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Sinopsis</h3>
+                            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">{t("modal.synopsis_title")}</h3>
                             <p className="text-zinc-300 text-sm leading-relaxed">
-                                {movie.title} ({movie.year}) menyajikan pengalaman tayangan sinematik terbaik dengan kualitas tinggi. Tonton petualangan dan kisah serunya secara langsung di NontonYuk.
+                                {movie.title} ({movie.year}) {t("modal.synopsis_text")}
                             </p>
                         </div>
 
@@ -197,9 +199,9 @@ export function MovieModal({ movie, onClose }: MovieModalProps) {
                         {isSeries && movie.episodes && movie.episodes.length > 0 && (
                             <div className="space-y-3 pt-2 border-t border-white/10">
                                 <h3 className="text-base font-bold text-white flex items-center justify-between">
-                                    <span>Daftar Episode</span>
+                                    <span>{t("modal.episodes_title")}</span>
                                     <span className="text-xs font-normal text-purple-400">
-                                        {movie.episodes.length} Episode
+                                        {movie.episodes.length} {t("modal.episodes_suffix")}
                                     </span>
                                 </h3>
 

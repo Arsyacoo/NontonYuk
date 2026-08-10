@@ -25,6 +25,7 @@ import { Footer } from "./components/Footer";
 import { WatchlistProvider } from "./context/watchlist-context";
 import { HistoryProvider } from "./context/history-context";
 import { ToastProvider } from "./context/toast-context";
+import { LanguageProvider } from "./context/language-context";
 
 export default function RootLayout({
   children,
@@ -36,15 +37,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#09090b] text-white`}
       >
-        <ToastProvider>
-          <WatchlistProvider>
-            <HistoryProvider>
-              <Navbar />
-              {children}
-              <Footer />
-            </HistoryProvider>
-          </WatchlistProvider>
-        </ToastProvider>
+        <LanguageProvider>
+          <ToastProvider>
+            <WatchlistProvider>
+              <HistoryProvider>
+                <Navbar />
+                {children}
+                <Footer />
+              </HistoryProvider>
+            </WatchlistProvider>
+          </ToastProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

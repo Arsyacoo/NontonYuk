@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Play, Info, Share2, Plus, Server, AlertCircle, Star, Trash2, Send, MessageSquare, Maximize2, Minimize2, Lightbulb, LightbulbOff } from "lucide-react";
+import { ArrowLeft, Play, Server, AlertCircle, Star, Trash2, Send, MessageSquare, Maximize2, Minimize2, Lightbulb, LightbulbOff } from "lucide-react";
 import { use, useState, useEffect } from "react";
 import { getAllMovies, Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
 import { useToast } from "@/app/context/toast-context";
+import { useLanguage } from "@/app/context/language-context";
 
 interface WatchPageProps {
     params: Promise<{ id: string }>;
@@ -33,6 +34,7 @@ export default function WatchPage({ params }: WatchPageProps) {
     const [activeServer, setActiveServer] = useState<ServerType>("vidsrc");
     const { addOrUpdateHistory } = useHistory();
     const { showToast } = useToast();
+    const { t, locale } = useLanguage();
 
     // Player Custom Modes
     const [isTheaterMode, setIsTheaterMode] = useState(false);
@@ -87,12 +89,12 @@ export default function WatchPage({ params }: WatchPageProps) {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isLightsDimmed) {
                 setIsLightsDimmed(false);
-                showToast("Lampu dinyalakan", "info");
+                showToast(locale === "id" ? "Lampu dinyalakan" : "Lights turned on", "info");
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isLightsDimmed]);
+    }, [isLightsDimmed, locale]);
 
     const isSeries = movie?.type === "series";
     const currentEpisode = isSeries
@@ -144,11 +146,11 @@ export default function WatchPage({ params }: WatchPageProps) {
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!commentName.trim()) {
-            showToast("Nama Anda tidak boleh kosong", "warning");
+            showToast(t("watch.toast.name_empty"), "warning");
             return;
         }
         if (!commentText.trim()) {
-            showToast("Teks ulasan tidak boleh kosong", "warning");
+            showToast(t("watch.toast.comment_empty"), "warning");
             return;
         }
 
@@ -169,7 +171,7 @@ export default function WatchPage({ params }: WatchPageProps) {
         // Reset
         setCommentText("");
         setCommentRating(5);
-        showToast("Ulasan Anda berhasil dikirim!", "success");
+        showToast(t("watch.toast.submit_success"), "success");
     };
 
     // Comment Deletion
@@ -177,7 +179,7 @@ export default function WatchPage({ params }: WatchPageProps) {
         const updated = comments.filter((c) => c.id !== commentId);
         setComments(updated);
         localStorage.setItem(`nontonyuk_comments_${id}`, JSON.stringify(updated));
-        showToast("Ulasan berhasil dihapus", "info");
+        showToast(t("watch.toast.delete_success"), "info");
     };
 
     // Calculate rating stats
@@ -189,12 +191,24 @@ export default function WatchPage({ params }: WatchPageProps) {
 
     const toggleTheaterMode = () => {
         setIsTheaterMode(!isTheaterMode);
-        showToast(isTheaterMode ? "Keluar dari Mode Bioskop" : "Masuk ke Mode Bioskop", "info");
+        showToast(
+            isTheaterMode
+                ? (locale === "id" ? "Keluar dari Mode Bioskop" : "Exited Theater Mode")
+                : (locale === "id" ? "Masuk ke Mode Bioskop" : "Entered Theater Mode"),
+            "info"
+        );
     };
 
     const toggleLightsDimmed = () => {
         setIsLightsDimmed(!isLightsDimmed);
-        showToast(isLightsDimmed ? "Lampu dinyalakan" : "Lampu diredupkan. Tekan ESC untuk menyalakan kembali", "info");
+        showToast(
+            isLightsDimmed
+                ? (locale === "id" ? "Lampu dinyalakan" : "Lights turned on")
+                : (locale === "id"
+                      ? "Lampu diredupkan. Tekan ESC untuk menyalakan kembali"
+                      : "Lights dimmed. Press ESC to turn on"),
+            "info"
+        );
     };
 
     return (
@@ -204,7 +218,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                 <div
                     onClick={toggleLightsDimmed}
                     className="fixed inset-0 bg-black/95 z-[90] cursor-pointer transition-opacity duration-300"
-                    title="Klik di mana saja untuk menyalakan lampu"
+                    title={locale === "id" ? "Klik di mana saja untuk menyalakan lampu" : "Click anywhere to turn on lights"}
                 />
             )}
 
@@ -243,12 +257,12 @@ export default function WatchPage({ params }: WatchPageProps) {
                         <div className="flex items-center gap-2">
                             <Server size={20} className="text-purple-400" />
                             <h3 className="text-lg font-bold text-zinc-100">
-                                Pilih Server Pemutaran
+                                {t("watch.server_title")}
                             </h3>
                         </div>
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 bg-white/5 px-2.5 py-1 rounded-md border border-white/5">
                             <AlertCircle size={12} className="text-zinc-500" />
-                            Pilih server alternatif jika video lambat/error.
+                            {t("watch.server_tip")}
                         </span>
                     </div>
 
@@ -257,7 +271,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                         <div className="flex flex-wrap gap-2.5 flex-1 min-w-[280px]">
                             <button
                                 onClick={() => setActiveServer("vidsrc")}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${activeServer === "vidsrc"
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeServer === "vidsrc"
                                         ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
                                         : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
                                     }`}
@@ -268,7 +282,7 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                             <button
                                 onClick={() => setActiveServer("superembed")}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${activeServer === "superembed"
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeServer === "superembed"
                                         ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
                                         : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
                                     }`}
@@ -279,7 +293,7 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                             <button
                                 onClick={() => setActiveServer("embedsu")}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${activeServer === "embedsu"
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeServer === "embedsu"
                                         ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-600/25"
                                         : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
                                     }`}
@@ -293,26 +307,26 @@ export default function WatchPage({ params }: WatchPageProps) {
                         <div className="flex items-center gap-2 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 w-full sm:w-auto justify-end">
                             <button
                                 onClick={toggleTheaterMode}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${isTheaterMode
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isTheaterMode
                                         ? "bg-purple-600/25 border-purple-500/50 text-purple-300"
                                         : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
                                     }`}
-                                title={isTheaterMode ? "Matikan Mode Bioskop" : "Nyalakan Mode Bioskop"}
+                                title={isTheaterMode ? (locale === "id" ? "Matikan Mode Bioskop" : "Turn off Theater Mode") : (locale === "id" ? "Nyalakan Mode Bioskop" : "Turn on Theater Mode")}
                             >
                                 {isTheaterMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                                <span>Bioskop</span>
+                                <span>{locale === "id" ? "Bioskop" : "Theater"}</span>
                             </button>
 
                             <button
                                 onClick={toggleLightsDimmed}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all ${isLightsDimmed
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isLightsDimmed
                                         ? "bg-yellow-500/25 border-yellow-500/40 text-yellow-300"
                                         : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
                                     }`}
-                                title={isLightsDimmed ? "Nyalakan Lampu" : "Redupkan Lampu"}
+                                title={isLightsDimmed ? (locale === "id" ? "Nyalakan Lampu" : "Turn on Lights") : (locale === "id" ? "Redupkan Lampu" : "Dim Lights")}
                             >
                                 {isLightsDimmed ? <Lightbulb size={16} /> : <LightbulbOff size={16} />}
-                                <span>Lampu</span>
+                                <span>{locale === "id" ? "Lampu" : "Lights"}</span>
                             </button>
                         </div>
                     </div>
@@ -323,7 +337,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                     <div className="bg-gradient-to-r from-purple-950/20 via-zinc-900/60 to-zinc-900/30 border border-purple-500/20 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
                         <div className="space-y-1">
                             <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
-                                Episode Selanjutnya
+                                {t("watch.next_episode_tag")}
                             </span>
                             <h4 className="text-base sm:text-lg font-bold text-white">
                                 Episode {nextEpisode.episode_number}: {nextEpisode.title}
@@ -333,7 +347,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                             href={`/watch/${id}?ep=${nextEpisode.episode_number}`}
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-all shadow-lg shadow-purple-600/20 active:scale-95 cursor-pointer"
                         >
-                            <Play size={14} className="fill-white" /> Putar Episode {nextEpisode.episode_number}
+                            <Play size={14} className="fill-white" /> {t("watch.next_episode_btn")} {nextEpisode.episode_number}
                         </Link>
                     </div>
                 )}
@@ -370,7 +384,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                     {/* Episode List (For Series) */}
                     {isSeries && movie?.episodes && (
                         <div className="bg-zinc-900/50 rounded-2xl p-6 border border-white/10">
-                            <h3 className="text-xl font-bold mb-4 text-zinc-200">Daftar Episode</h3>
+                            <h3 className="text-xl font-bold mb-4 text-zinc-200">{t("modal.episodes_title")}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {movie.episodes.map((ep) => (
                                     <Link
@@ -405,10 +419,7 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                     {/* Description */}
                     <div className="max-w-3xl text-gray-300 text-base leading-relaxed mt-2">
-                        <p>
-                            Nikmati pengalaman menonton sinematik resolusi tinggi di NontonYuk.
-                            Disajikan khusus untuk para penggemar film, anime, dan serial pilihan.
-                        </p>
+                        <p>{t("watch.description")}</p>
                     </div>
                 </div>
 
@@ -418,16 +429,16 @@ export default function WatchPage({ params }: WatchPageProps) {
                     <div className="lg:col-span-1 space-y-6">
                         <div className="flex items-center gap-2">
                             <MessageSquare size={20} className="text-purple-400" />
-                            <h3 className="text-xl font-bold text-white">Diskusi & Ulasan</h3>
+                            <h3 className="text-xl font-bold text-white">{t("watch.reviews_title")}</h3>
                         </div>
 
                         {/* Rating Stats Summary */}
                         <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 space-y-3">
-                            <h4 className="text-sm font-semibold text-zinc-400">Rata-rata Rating Lokal</h4>
+                            <h4 className="text-sm font-semibold text-zinc-400">{t("watch.reviews_average")}</h4>
                             {avgRating ? (
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-4xl font-extrabold text-white">{avgRating}</span>
-                                    <span className="text-sm text-zinc-500">/ 5 bintang</span>
+                                    <span className="text-sm text-zinc-500">{t("watch.reviews_stars")}</span>
                                     <div className="flex items-center text-amber-400 gap-0.5 ml-2">
                                         {Array.from({ length: 5 }).map((_, i) => (
                                             <Star
@@ -439,18 +450,20 @@ export default function WatchPage({ params }: WatchPageProps) {
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-sm text-zinc-400">Belum ada ulasan lokal. Jadilah yang pertama!</p>
+                                <p className="text-sm text-zinc-400">{t("watch.reviews_empty_local")}</p>
                             )}
-                            <p className="text-xs text-zinc-500">Berdasarkan {totalReviews} ulasan tersimpan di browser ini.</p>
+                            <p className="text-xs text-zinc-500">
+                                {t("watch.reviews_count_prefix")} {totalReviews} {t("watch.reviews_count_suffix")}
+                            </p>
                         </div>
 
                         {/* Review Form */}
                         <form onSubmit={handleCommentSubmit} className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 space-y-4">
-                            <h4 className="text-sm font-bold text-zinc-200">Tulis Ulasan Anda</h4>
+                            <h4 className="text-sm font-bold text-zinc-200">{t("watch.form_title")}</h4>
 
                             {/* Stars Rating Selector */}
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">Rating Anda</label>
+                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">{t("watch.form_rating")}</label>
                                 <div className="flex items-center gap-1.5">
                                     {Array.from({ length: 5 }).map((_, i) => {
                                         const starValue = i + 1;
@@ -462,7 +475,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                                                 onClick={() => setCommentRating(starValue)}
                                                 onMouseEnter={() => setHoveredStar(starValue)}
                                                 onMouseLeave={() => setHoveredStar(0)}
-                                                className="transition-transform active:scale-90 text-zinc-650"
+                                                className="transition-transform active:scale-90 text-zinc-650 cursor-pointer"
                                             >
                                                 <Star
                                                     size={24}
@@ -476,23 +489,23 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                             {/* Name Input */}
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">Nama</label>
+                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">{t("watch.form_name")}</label>
                                 <input
                                     type="text"
                                     value={commentName}
                                     onChange={(e) => setCommentName(e.target.value)}
-                                    placeholder="Masukkan nama Anda..."
+                                    placeholder={t("watch.form_name_placeholder")}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                                 />
                             </div>
 
                             {/* Text Input */}
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">Ulasan / Komentar</label>
+                                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider block">{t("watch.form_comment")}</label>
                                 <textarea
                                     value={commentText}
                                     onChange={(e) => setCommentText(e.target.value)}
-                                    placeholder="Tulis ulasan menarik Anda di sini..."
+                                    placeholder={t("watch.form_comment_placeholder")}
                                     rows={3}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3.5 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none"
                                 />
@@ -503,20 +516,20 @@ export default function WatchPage({ params }: WatchPageProps) {
                                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-colors shadow-lg shadow-purple-600/20 cursor-pointer"
                             >
                                 <Send size={14} />
-                                Kirim Ulasan
+                                {t("watch.form_submit")}
                             </button>
                         </form>
                     </div>
 
                     {/* Right: Comments List */}
                     <div className="lg:col-span-2 space-y-4">
-                        <h4 className="text-lg font-bold text-white">Ulasan Pengguna ({comments.length})</h4>
+                        <h4 className="text-lg font-bold text-white">{t("watch.list_title")} ({comments.length})</h4>
 
                         {comments.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-14 text-center border border-dashed border-white/15 rounded-2xl text-zinc-400 space-y-2 bg-zinc-900/10">
                                 <MessageSquare size={32} className="text-zinc-600" />
-                                <p className="text-sm font-semibold">Belum Ada Ulasan</p>
-                                <p className="text-xs text-zinc-500 max-w-xs">Ulasan yang Anda kirim akan tersimpan di sini secara instan.</p>
+                                <p className="text-sm font-semibold">{t("watch.list_empty")}</p>
+                                <p className="text-xs text-zinc-500 max-w-xs">{t("watch.list_empty_desc")}</p>
                             </div>
                         ) : (
                             <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 divide-y divide-white/5">
@@ -557,7 +570,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                                                     ))}
                                                 </div>
                                                 <span className="text-[10px] text-zinc-500">
-                                                    {new Date(comment.createdAt).toLocaleDateString("id-ID", {
+                                                    {new Date(comment.createdAt).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
                                                         day: "numeric",
                                                         month: "short",
                                                         year: "numeric",
