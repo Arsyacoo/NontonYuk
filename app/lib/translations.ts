@@ -119,6 +119,13 @@ export const translations = {
         "search.title": "Hasil Pencarian untuk",
         "search.loading": "Mencari...",
         "search.empty": "Tidak ada film ditemukan untuk",
+
+        // Ambient Themes
+        "watch.ambient_title": "Pencahayaan Ambient",
+        "watch.ambient_black": "Pitch Black",
+        "watch.ambient_purple": "Midnight Purple",
+        "watch.ambient_blue": "Deep Space Blue",
+        "watch.ambient_red": "Cinema Red",
     },
     en: {
         // Navbar
@@ -238,5 +245,12 @@ export const translations = {
         "search.title": "Search Results for",
         "search.loading": "Searching...",
         "search.empty": "No movies found for",
+
+        // Ambient Themes
+        "watch.ambient_title": "Ambient Lighting",
+        "watch.ambient_black": "Pitch Black",
+        "watch.ambient_purple": "Midnight Purple",
+        "watch.ambient_blue": "Deep Space Blue",
+        "watch.ambient_red": "Cinema Red",
     },
 };

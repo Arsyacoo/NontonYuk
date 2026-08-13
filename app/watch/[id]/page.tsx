@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Play, Server, AlertCircle, Star, Trash2, Send, MessageSquare, Maximize2, Minimize2, Lightbulb, LightbulbOff } from "lucide-react";
 import { use, useState, useEffect } from "react";
+import { clsx } from "clsx";
 import { getAllMovies, Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
 import { useToast } from "@/app/context/toast-context";
@@ -14,6 +15,7 @@ interface WatchPageProps {
 }
 
 type ServerType = "vidsrc" | "superembed" | "embedsu";
+type AmbientType = "black" | "purple" | "blue" | "red";
 
 interface Comment {
     id: string;
@@ -39,6 +41,19 @@ export default function WatchPage({ params }: WatchPageProps) {
     // Player Custom Modes
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const [isLightsDimmed, setIsLightsDimmed] = useState(false);
+    const [ambientTheme, setAmbientTheme] = useState<AmbientType>("black");
+
+    // Load saved ambient theme preference on mount
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("nontonyuk_ambient_theme") as AmbientType | null;
+            if (saved === "black" || saved === "purple" || saved === "blue" || saved === "red") {
+                setAmbientTheme(saved);
+            }
+        } catch (e) {
+            console.error("Failed to load ambient theme:", e);
+        }
+    }, []);
 
     // Local Comments States
     const [comments, setComments] = useState<Comment[]>([]);
@@ -212,7 +227,13 @@ export default function WatchPage({ params }: WatchPageProps) {
     };
 
     return (
-        <main className="min-h-screen bg-[#09090b] text-white relative">
+        <main className={clsx(
+            "min-h-screen text-white relative transition-colors duration-500 ease-in-out",
+            ambientTheme === "black" && "bg-[#09090b]",
+            ambientTheme === "purple" && "bg-gradient-to-b from-[#180a2b] via-[#09090b] to-[#09090b]",
+            ambientTheme === "blue" && "bg-gradient-to-b from-[#061730] via-[#09090b] to-[#09090b]",
+            ambientTheme === "red" && "bg-gradient-to-b from-[#2d0812] via-[#09090b] to-[#09090b]"
+        )}>
             {/* Dim Lights Background Overlay */}
             {isLightsDimmed && (
                 <div
@@ -232,10 +253,16 @@ export default function WatchPage({ params }: WatchPageProps) {
 
             {/* Cinema Mode Player Container */}
             <div
-                className={`relative bg-black transition-all duration-300 shadow-2xl shadow-purple-900/20 z-[95] ${isTheaterMode
+                className={clsx(
+                    "relative bg-black transition-all duration-300 shadow-2xl z-[95]",
+                    isTheaterMode
                         ? "w-full h-[75vh] md:h-[90vh] lg:h-[95vh] max-w-none"
-                        : "max-w-7xl mx-auto rounded-none md:rounded-2xl overflow-hidden mt-0 md:mt-24 w-full h-[55vh] md:h-[75vh] border border-white/10"
-                    }`}
+                        : "max-w-7xl mx-auto rounded-none md:rounded-2xl overflow-hidden mt-0 md:mt-24 w-full h-[55vh] md:h-[75vh] border border-white/10",
+                    ambientTheme === "black" && "shadow-purple-900/10",
+                    ambientTheme === "purple" && "shadow-purple-600/35 border-purple-500/20",
+                    ambientTheme === "blue" && "shadow-blue-600/30 border-blue-500/20",
+                    ambientTheme === "red" && "shadow-rose-600/30 border-rose-500/20"
+                )}
             >
                 <iframe
                     key={playerUrl}
