@@ -331,7 +331,46 @@ export default function WatchPage({ params }: WatchPageProps) {
                         </div>
 
                         {/* Player Mode Buttons */}
-                        <div className="flex items-center gap-2 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 w-full sm:w-auto justify-end">
+                        <div className="flex flex-wrap items-center gap-3 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 w-full sm:w-auto justify-end">
+                            {/* Ambient Theme Dots Selector */}
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl shrink-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 select-none">
+                                    {t("watch.ambient_title")}
+                                </span>
+                                <div className="flex items-center gap-1.5 ml-1">
+                                    {([
+                                        { id: "black", color: "bg-[#09090b] border-white/30", label: t("watch.ambient_black") },
+                                        { id: "purple", color: "bg-purple-600 border-purple-400", label: t("watch.ambient_purple") },
+                                        { id: "blue", color: "bg-blue-600 border-blue-400", label: t("watch.ambient_blue") },
+                                        { id: "red", color: "bg-rose-600 border-rose-500", label: t("watch.ambient_red") }
+                                    ] as const).map((themeOpt) => (
+                                        <button
+                                            key={themeOpt.id}
+                                            onClick={() => {
+                                                setAmbientTheme(themeOpt.id);
+                                                try {
+                                                    localStorage.setItem("nontonyuk_ambient_theme", themeOpt.id);
+                                                } catch (e) {
+                                                    console.error(e);
+                                                }
+                                                showToast(
+                                                    locale === "id"
+                                                        ? `Atmosfer ruangan diganti ke ${themeOpt.label}`
+                                                        : `Room atmosphere changed to ${themeOpt.label}`,
+                                                    "success"
+                                                );
+                                            }}
+                                            className={clsx(
+                                                "w-4.5 h-4.5 rounded-full border transition-all cursor-pointer hover:scale-110 active:scale-95",
+                                                themeOpt.color,
+                                                ambientTheme === themeOpt.id ? "ring-2 ring-purple-500 border-white" : "border-transparent"
+                                            )}
+                                            title={themeOpt.label}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
                             <button
                                 onClick={toggleTheaterMode}
                                 className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isTheaterMode
