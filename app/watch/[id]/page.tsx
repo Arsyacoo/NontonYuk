@@ -1,14 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Play, Server, AlertCircle, Star, Trash2, Send, MessageSquare, Maximize2, Minimize2, Lightbulb, LightbulbOff } from "lucide-react";
-import { use, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+    ArrowLeft,
+    Play,
+    Server,
+    AlertCircle,
+    Star,
+    Trash2,
+    Send,
+    MessageSquare,
+    Maximize2,
+    Minimize2,
+    Lightbulb,
+    LightbulbOff,
+    Keyboard,
+    ChevronLeft,
+    ChevronRight,
+    Timer,
+    CheckCircle2
+} from "lucide-react";
+import { use, useState, useEffect, useRef } from "react";
 import { clsx } from "clsx";
 import { getAllMovies, Movie } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
 import { useToast } from "@/app/context/toast-context";
 import { useLanguage } from "@/app/context/language-context";
+import { KeyboardShortcutsModal } from "@/app/components/KeyboardShortcutsModal";
 
 interface WatchPageProps {
     params: Promise<{ id: string }>;
@@ -28,6 +47,7 @@ interface Comment {
 
 export default function WatchPage({ params }: WatchPageProps) {
     const { id } = use(params);
+    const router = useRouter();
     const searchParams = useSearchParams();
     const epParam = searchParams.get("ep");
     const currentEpNumber = epParam ? parseInt(epParam, 10) : 1;
@@ -38,20 +58,33 @@ export default function WatchPage({ params }: WatchPageProps) {
     const { showToast } = useToast();
     const { t, locale } = useLanguage();
 
-    // Player Custom Modes
+    const playerContainerRef = useRef<HTMLDivElement>(null);
+
+    // Player Custom Modes & Shortcuts
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const [isLightsDimmed, setIsLightsDimmed] = useState(false);
     const [ambientTheme, setAmbientTheme] = useState<AmbientType>("black");
+    const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+    const [hudMessage, setHudMessage] = useState<string | null>(null);
 
-    // Load saved ambient theme preference on mount
+    // Auto-Next Episode States
+    const [isAutoNextEnabled, setIsAutoNextEnabled] = useState(true);
+    const [isAutoNextActive, setIsAutoNextActive] = useState(false);
+    const [autoNextCountdown, setAutoNextCountdown] = useState(10);
+
+    // Load saved preferences
     useEffect(() => {
         try {
-            const saved = localStorage.getItem("nontonyuk_ambient_theme") as AmbientType | null;
-            if (saved === "black" || saved === "purple" || saved === "blue" || saved === "red") {
-                setAmbientTheme(saved);
+            const savedAmbient = localStorage.getItem("nontonyuk_ambient_theme") as AmbientType | null;
+            if (savedAmbient === "black" || savedAmbient === "purple" || savedAmbient === "blue" || savedAmbient === "red") {
+                setAmbientTheme(savedAmbient);
+            }
+            const savedAutoNext = localStorage.getItem("nontonyuk_autonext");
+            if (savedAutoNext !== null) {
+                setIsAutoNextEnabled(savedAutoNext === "true");
             }
         } catch (e) {
-            console.error("Failed to load ambient theme:", e);
+            console.error("Failed to load saved preferences:", e);
         }
     }, []);
 
@@ -82,7 +115,6 @@ export default function WatchPage({ params }: WatchPageProps) {
             } else {
                 setComments([]);
             }
-            // Preserve user name from previous session if exists
             const savedName = localStorage.getItem("nontonyuk_username");
             if (savedName) {
                 setCommentName(savedName);
@@ -92,35 +124,170 @@ export default function WatchPage({ params }: WatchPageProps) {
         }
     }, [id]);
 
+    const isSeries = movie?.type === "series";
+    const totalEpisodes = movie?.episodes?.length || 0;
+    const currentEpisode = isSeries
+        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber)
+        : null;
+
+    // Series Next & Previous Episode calculation
+    const hasNextEpisode = isSeries && movie?.episodes && currentEpNumber < totalEpisodes;
+    const nextEpisode = hasNextEpisode
+        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber + 1)
+        : null;
+    const hasPrevEpisode = isSeries && currentEpNumber > 1;
+    const prevEpisode = hasPrevEpisode
+        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber - 1)
+        : null;
+
     // Record history
     useEffect(() => {
         if (movie) {
             addOrUpdateHistory(movie, isSeries ? currentEpNumber : undefined);
         }
-    }, [movie, currentEpNumber]);
+    }, [movie, currentEpNumber, isSeries]);
 
-    // Listen to ESC key to turn lights back on
+    // Trigger HUD banner helper
+    const showHUD = (msg: string) => {
+        setHudMessage(msg);
+        const timer = setTimeout(() => setHudMessage(null), 2500);
+        return () => clearTimeout(timer);
+    };
+
+    // Fullscreen toggle helper
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            if (playerContainerRef.current) {
+                playerContainerRef.current.requestFullscreen().catch((err) => {
+                    console.error("Fullscreen error:", err);
+                });
+            } else {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+            showHUD(locale === "id" ? "📺 Layar Penuh: AKTIF" : "📺 Fullscreen: ON");
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            showHUD(locale === "id" ? "📺 Layar Penuh: NONAKTIF" : "📺 Fullscreen: OFF");
+        }
+    };
+
+    const toggleTheaterMode = () => {
+        setIsTheaterMode((prev) => {
+            const next = !prev;
+            showHUD(
+                next
+                    ? (locale === "id" ? "🎬 Mode Bioskop: AKTIF" : "🎬 Theater Mode: ON")
+                    : (locale === "id" ? "🎬 Mode Bioskop: NONAKTIF" : "🎬 Theater Mode: OFF")
+            );
+            return next;
+        });
+    };
+
+    const toggleLightsDimmed = () => {
+        setIsLightsDimmed((prev) => {
+            const next = !prev;
+            showHUD(
+                next
+                    ? (locale === "id" ? "💡 Lampu Diredupkan (ESC untuk batal)" : "💡 Lights Dimmed (ESC to exit)")
+                    : (locale === "id" ? "💡 Lampu Dinyalakan" : "💡 Lights ON")
+            );
+            return next;
+        });
+    };
+
+    const toggleAutoNext = () => {
+        setIsAutoNextEnabled((prev) => {
+            const next = !prev;
+            try {
+                localStorage.setItem("nontonyuk_autonext", String(next));
+            } catch (e) {
+                console.error(e);
+            }
+            showToast(
+                next
+                    ? (locale === "id" ? "Auto-Next Episode diaktifkan" : "Auto-Next Episode enabled")
+                    : (locale === "id" ? "Auto-Next Episode dinonaktifkan" : "Auto-Next Episode disabled"),
+                "info"
+            );
+            return next;
+        });
+    };
+
+    // Global Cinema Keyboard Shortcuts Listener
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && isLightsDimmed) {
-                setIsLightsDimmed(false);
-                showToast(locale === "id" ? "Lampu dinyalakan" : "Lights turned on", "info");
+            const activeTag = document.activeElement?.tagName.toLowerCase();
+            const isInputFocused =
+                activeTag === "input" ||
+                activeTag === "textarea" ||
+                (document.activeElement as HTMLElement)?.isContentEditable;
+
+            if (isInputFocused) return;
+
+            if (e.key === "Escape") {
+                if (isShortcutsOpen) {
+                    setIsShortcutsOpen(false);
+                } else if (isLightsDimmed) {
+                    setIsLightsDimmed(false);
+                    showHUD(locale === "id" ? "💡 Lampu Dinyalakan" : "💡 Lights ON");
+                }
+            } else if (e.key === "t" || e.key === "T") {
+                e.preventDefault();
+                toggleTheaterMode();
+            } else if (e.key === "l" || e.key === "L") {
+                e.preventDefault();
+                toggleLightsDimmed();
+            } else if (e.key === "f" || e.key === "F") {
+                e.preventDefault();
+                toggleFullscreen();
+            } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+                e.preventDefault();
+                setIsShortcutsOpen((prev) => !prev);
+            } else if ((e.key === "n" || e.key === "N") && hasNextEpisode && nextEpisode) {
+                e.preventDefault();
+                showHUD(`⏭️ Episode ${nextEpisode.episode_number}: ${nextEpisode.title}`);
+                router.push(`/watch/${id}?ep=${nextEpisode.episode_number}`);
+            } else if ((e.key === "p" || e.key === "P") && hasPrevEpisode && prevEpisode) {
+                e.preventDefault();
+                showHUD(`⏮️ Episode ${prevEpisode.episode_number}: ${prevEpisode.title}`);
+                router.push(`/watch/${id}?ep=${prevEpisode.episode_number}`);
             }
         };
+
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isLightsDimmed, locale]);
+    }, [
+        isLightsDimmed,
+        isShortcutsOpen,
+        hasNextEpisode,
+        hasPrevEpisode,
+        nextEpisode,
+        prevEpisode,
+        id,
+        locale,
+        router,
+    ]);
 
-    const isSeries = movie?.type === "series";
-    const currentEpisode = isSeries
-        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber)
-        : null;
-
-    // Next Episode calculation
-    const hasNextEpisode = isSeries && movie?.episodes && currentEpNumber < movie.episodes.length;
-    const nextEpisode = hasNextEpisode
-        ? movie?.episodes?.find((e) => e.episode_number === currentEpNumber + 1)
-        : null;
+    // Auto-Next Episode Timer Logic
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isAutoNextActive && hasNextEpisode && nextEpisode) {
+            interval = setInterval(() => {
+                setAutoNextCountdown((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        setIsAutoNextActive(false);
+                        router.push(`/watch/${id}?ep=${nextEpisode.episode_number}`);
+                        return 10;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isAutoNextActive, hasNextEpisode, nextEpisode, id, router]);
 
     const displayYear = movie ? movie.year : "";
     const displayGenre = movie ? movie.genre?.join(" / ") : "";
@@ -204,28 +371,6 @@ export default function WatchPage({ params }: WatchPageProps) {
             ? (comments.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews).toFixed(1)
             : null;
 
-    const toggleTheaterMode = () => {
-        setIsTheaterMode(!isTheaterMode);
-        showToast(
-            isTheaterMode
-                ? (locale === "id" ? "Keluar dari Mode Bioskop" : "Exited Theater Mode")
-                : (locale === "id" ? "Masuk ke Mode Bioskop" : "Entered Theater Mode"),
-            "info"
-        );
-    };
-
-    const toggleLightsDimmed = () => {
-        setIsLightsDimmed(!isLightsDimmed);
-        showToast(
-            isLightsDimmed
-                ? (locale === "id" ? "Lampu dinyalakan" : "Lights turned on")
-                : (locale === "id"
-                      ? "Lampu diredupkan. Tekan ESC untuk menyalakan kembali"
-                      : "Lights dimmed. Press ESC to turn on"),
-            "info"
-        );
-    };
-
     return (
         <main className={clsx(
             "min-h-screen text-white relative transition-colors duration-500 ease-in-out",
@@ -234,6 +379,15 @@ export default function WatchPage({ params }: WatchPageProps) {
             ambientTheme === "blue" && "bg-gradient-to-b from-[#061730] via-[#09090b] to-[#09090b]",
             ambientTheme === "red" && "bg-gradient-to-b from-[#2d0812] via-[#09090b] to-[#09090b]"
         )}>
+            {/* Floating HUD Indicator */}
+            {hudMessage && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] pointer-events-none animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-center gap-2 rounded-full border border-purple-500/40 bg-black/80 px-5 py-2 text-sm font-semibold text-white shadow-2xl backdrop-blur-md">
+                        <span>{hudMessage}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Dim Lights Background Overlay */}
             {isLightsDimmed && (
                 <div
@@ -253,6 +407,7 @@ export default function WatchPage({ params }: WatchPageProps) {
 
             {/* Cinema Mode Player Container */}
             <div
+                ref={playerContainerRef}
                 className={clsx(
                     "relative bg-black transition-all duration-300 shadow-2xl z-[95]",
                     isTheaterMode
@@ -278,7 +433,7 @@ export default function WatchPage({ params }: WatchPageProps) {
 
             {/* Details Section & Server Switcher */}
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-8 relative z-10">
-                {/* Server Switcher Panel */}
+                {/* Server Switcher & Cinema Toolbar Panel */}
                 <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 md:p-6 space-y-4 shadow-xl">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -331,7 +486,7 @@ export default function WatchPage({ params }: WatchPageProps) {
                         </div>
 
                         {/* Player Mode Buttons */}
-                        <div className="flex flex-wrap items-center gap-3 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 w-full sm:w-auto justify-end">
+                        <div className="flex flex-wrap items-center gap-2.5 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 w-full sm:w-auto justify-end">
                             {/* Ambient Theme Dots Selector */}
                             <div className="flex items-center gap-2 bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl shrink-0">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 select-none">
@@ -373,11 +528,11 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                             <button
                                 onClick={toggleTheaterMode}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isTheaterMode
-                                        ? "bg-purple-600/25 border-purple-500/50 text-purple-300"
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isTheaterMode
+                                        ? "bg-purple-600/25 border-purple-500/50 text-purple-300 shadow-md shadow-purple-600/20"
                                         : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
                                     }`}
-                                title={isTheaterMode ? (locale === "id" ? "Matikan Mode Bioskop" : "Turn off Theater Mode") : (locale === "id" ? "Nyalakan Mode Bioskop" : "Turn on Theater Mode")}
+                                title={isTheaterMode ? (locale === "id" ? "Matikan Mode Bioskop (T)" : "Turn off Theater Mode (T)") : (locale === "id" ? "Nyalakan Mode Bioskop (T)" : "Turn on Theater Mode (T)")}
                             >
                                 {isTheaterMode ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                                 <span>{locale === "id" ? "Bioskop" : "Theater"}</span>
@@ -385,36 +540,155 @@ export default function WatchPage({ params }: WatchPageProps) {
 
                             <button
                                 onClick={toggleLightsDimmed}
-                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isLightsDimmed
-                                        ? "bg-yellow-500/25 border-yellow-500/40 text-yellow-300"
+                                className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer ${isLightsDimmed
+                                        ? "bg-yellow-500/25 border-yellow-500/40 text-yellow-300 shadow-md shadow-yellow-500/20"
                                         : "bg-white/5 border-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
                                     }`}
-                                title={isLightsDimmed ? (locale === "id" ? "Nyalakan Lampu" : "Turn on Lights") : (locale === "id" ? "Redupkan Lampu" : "Dim Lights")}
+                                title={isLightsDimmed ? (locale === "id" ? "Nyalakan Lampu (L / ESC)" : "Turn on Lights (L / ESC)") : (locale === "id" ? "Redupkan Lampu (L)" : "Dim Lights (L)")}
                             >
                                 {isLightsDimmed ? <Lightbulb size={16} /> : <LightbulbOff size={16} />}
                                 <span>{locale === "id" ? "Lampu" : "Lights"}</span>
+                            </button>
+
+                            {/* Keyboard Shortcuts Trigger Button */}
+                            <button
+                                onClick={() => setIsShortcutsOpen(true)}
+                                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-white/5 bg-white/5 text-zinc-400 hover:bg-purple-600/20 hover:border-purple-500/40 hover:text-purple-300 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+                                title={locale === "id" ? "Panduan Tombol Pintas (?)" : "Keyboard Shortcuts (?)"}
+                            >
+                                <Keyboard size={16} />
+                                <span className="hidden sm:inline">{locale === "id" ? "Pintasan" : "Shortcuts"}</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Auto-Play Next Episode Banner */}
-                {isSeries && nextEpisode && (
-                    <div className="bg-gradient-to-r from-purple-950/20 via-zinc-900/60 to-zinc-900/30 border border-purple-500/20 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-xl">
-                        <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
-                                {t("watch.next_episode_tag")}
-                            </span>
-                            <h4 className="text-base sm:text-lg font-bold text-white">
-                                Episode {nextEpisode.episode_number}: {nextEpisode.title}
-                            </h4>
+                {/* Series Quick Episode Navigation & Auto-Next Bar */}
+                {isSeries && (
+                    <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled={!hasPrevEpisode}
+                                onClick={() => {
+                                    if (prevEpisode) {
+                                        showHUD(`⏮️ Episode ${prevEpisode.episode_number}: ${prevEpisode.title}`);
+                                        router.push(`/watch/${id}?ep=${prevEpisode.episode_number}`);
+                                    }
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${hasPrevEpisode
+                                        ? "bg-white/10 hover:bg-purple-600 hover:text-white text-zinc-200 border border-white/10 cursor-pointer active:scale-95"
+                                        : "bg-white/5 text-zinc-600 border border-white/5 cursor-not-allowed opacity-50"
+                                    }`}
+                                title={locale === "id" ? "Episode Sebelumnya (P)" : "Previous Episode (P)"}
+                            >
+                                <ChevronLeft size={16} />
+                                <span>{locale === "id" ? "Sebelumnya" : "Prev"}</span>
+                            </button>
+
+                            <div className="px-3 py-1.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-300 text-xs sm:text-sm font-bold">
+                                {locale === "id" ? `Episode ${currentEpNumber} dari ${totalEpisodes}` : `Episode ${currentEpNumber} of ${totalEpisodes}`}
+                            </div>
+
+                            <button
+                                disabled={!hasNextEpisode}
+                                onClick={() => {
+                                    if (nextEpisode) {
+                                        showHUD(`⏭️ Episode ${nextEpisode.episode_number}: ${nextEpisode.title}`);
+                                        router.push(`/watch/${id}?ep=${nextEpisode.episode_number}`);
+                                    }
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${hasNextEpisode
+                                        ? "bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/25 border border-purple-500/50 cursor-pointer active:scale-95"
+                                        : "bg-white/5 text-zinc-600 border border-white/5 cursor-not-allowed opacity-50"
+                                    }`}
+                                title={locale === "id" ? "Episode Berikutnya (N)" : "Next Episode (N)"}
+                            >
+                                <span>{locale === "id" ? "Berikutnya" : "Next"}</span>
+                                <ChevronRight size={16} />
+                            </button>
                         </div>
-                        <Link
-                            href={`/watch/${id}?ep=${nextEpisode.episode_number}`}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-all shadow-lg shadow-purple-600/20 active:scale-95 cursor-pointer"
-                        >
-                            <Play size={14} className="fill-white" /> {t("watch.next_episode_btn")} {nextEpisode.episode_number}
-                        </Link>
+
+                        {/* Auto-Next Toggle */}
+                        {hasNextEpisode && (
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={toggleAutoNext}
+                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${isAutoNextEnabled
+                                            ? "bg-purple-950/40 border-purple-500/30 text-purple-300"
+                                            : "bg-white/5 border-white/5 text-zinc-400 hover:text-zinc-200"
+                                        }`}
+                                >
+                                    <Timer size={14} className={isAutoNextEnabled ? "text-purple-400" : "text-zinc-500"} />
+                                    <span>{locale === "id" ? "Auto-Next Episode" : "Auto-Next Episode"}:</span>
+                                    <span className={isAutoNextEnabled ? "text-emerald-400 font-bold" : "text-zinc-500"}>
+                                        {isAutoNextEnabled ? "ON" : "OFF"}
+                                    </span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Auto-Play Next Episode Countdown / Banner */}
+                {isSeries && nextEpisode && (
+                    <div className="relative overflow-hidden bg-gradient-to-r from-purple-950/30 via-zinc-900/70 to-zinc-900/40 border border-purple-500/30 rounded-2xl p-5 shadow-2xl space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-300 bg-purple-900/40 px-2 py-0.5 rounded border border-purple-500/30 uppercase tracking-wider">
+                                        <Timer size={12} />
+                                        {t("watch.next_episode_tag")}
+                                    </span>
+                                    {isAutoNextActive && (
+                                        <span className="text-xs font-bold text-amber-400 animate-pulse">
+                                            {locale === "id" ? `Memutar dalam ${autoNextCountdown}s...` : `Playing in ${autoNextCountdown}s...`}
+                                        </span>
+                                    )}
+                                </div>
+                                <h4 className="text-base sm:text-lg font-bold text-white">
+                                    Episode {nextEpisode.episode_number}: {nextEpisode.title}
+                                </h4>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                {isAutoNextActive ? (
+                                    <button
+                                        onClick={() => setIsAutoNextActive(false)}
+                                        className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors cursor-pointer"
+                                    >
+                                        {locale === "id" ? "Batalkan Countdown" : "Cancel Countdown"}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            setIsAutoNextActive(true);
+                                            setAutoNextCountdown(10);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold border border-white/5 transition-colors cursor-pointer"
+                                    >
+                                        <Timer size={14} />
+                                        {locale === "id" ? "Hitung Mundur (10s)" : "Countdown (10s)"}
+                                    </button>
+                                )}
+
+                                <Link
+                                    href={`/watch/${id}?ep=${nextEpisode.episode_number}`}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-sm transition-all shadow-lg shadow-purple-600/25 active:scale-95 cursor-pointer"
+                                >
+                                    <Play size={14} className="fill-white" /> {t("watch.next_episode_btn")} {nextEpisode.episode_number}
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Animated Countdown Progress Bar */}
+                        {isAutoNextActive && (
+                            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className="bg-purple-500 h-full rounded-full transition-all duration-1000 ease-linear"
+                                    style={{ width: `${(autoNextCountdown / 10) * 100}%` }}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -655,6 +929,12 @@ export default function WatchPage({ params }: WatchPageProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Keyboard Shortcuts Modal */}
+            <KeyboardShortcutsModal
+                isOpen={isShortcutsOpen}
+                onClose={() => setIsShortcutsOpen(false)}
+            />
         </main>
     );
 }
