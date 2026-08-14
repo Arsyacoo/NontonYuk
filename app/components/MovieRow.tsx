@@ -38,7 +38,7 @@ export function MovieRow({ title, movies, onOpenModal }: MovieRowProps) {
 
                 <div
                     ref={rowRef}
-                    className="flex items-center space-x-3.5 overflow-x-scroll scrollbar-hide md:p-2 pl-4 md:pl-12 py-2"
+                    className="flex items-center space-x-4 overflow-x-scroll scrollbar-hide md:px-2 pl-4 md:pl-12 py-6 -my-3"
                 >
                     {movies.map((movie) => (
                         <div key={movie._id} className="relative min-w-[170px] sm:min-w-[200px] md:min-w-[220px] h-[280px] md:h-[340px] shrink-0">
