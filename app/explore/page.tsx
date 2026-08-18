@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Search, Filter, RefreshCw, Film, Sliders, ChevronDown } from "lucide-react";
-import { Movie, getAllMovies } from "@/app/lib/movies";
+import { Movie, getAllMovies, MoodId } from "@/app/lib/movies";
 import { MovieGrid } from "@/app/components/MovieGrid";
 import { MovieCard } from "@/app/components/MovieCard";
 import { MovieModal } from "@/app/components/MovieModal";
+import { MoodPicker } from "@/app/components/MoodPicker";
 import { useLanguage } from "@/app/context/language-context";
 
 const GENRES = [
@@ -30,6 +31,7 @@ export default function ExplorePage() {
 
     // Filter States
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedMood, setSelectedMood] = useState<MoodId>("all");
     const [selectedType, setSelectedType] = useState<"all" | "movie" | "series">("all");
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
     const [selectedYear, setSelectedYear] = useState("all");
@@ -75,25 +77,30 @@ export default function ExplorePage() {
     useEffect(() => {
         let results = [...allMovies];
 
-        // 1. Search Query
+        // 1. Mood Filter
+        if (selectedMood !== "all") {
+            results = results.filter((m) => m.mood?.includes(selectedMood));
+        }
+
+        // 2. Search Query
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim();
             results = results.filter((m) => m.title.toLowerCase().includes(query));
         }
 
-        // 2. Media Type
+        // 3. Media Type
         if (selectedType !== "all") {
             results = results.filter((m) => m.type === selectedType);
         }
 
-        // 3. Genres (Matches at least one selected genre if any selected)
+        // 4. Genres (Matches at least one selected genre if any selected)
         if (selectedGenres.length > 0) {
             results = results.filter((m) =>
                 m.genre?.some((g) => selectedGenres.includes(g.toLowerCase()))
             );
         }
 
-        // 4. Release Year
+        // 5. Release Year
         if (selectedYear !== "all") {
             if (selectedYear === "2020s") {
                 results = results.filter((m) => parseInt(m.year, 10) >= 2020);
@@ -106,14 +113,14 @@ export default function ExplorePage() {
             }
         }
 
-        // 5. IMDb Rating
+        // 6. IMDb Rating
         if (selectedRating !== "all") {
             const minRating = parseFloat(selectedRating);
             results = results.filter((m) => m.vote && m.vote >= minRating);
         }
 
         setFilteredMovies(results);
-    }, [searchQuery, selectedType, selectedGenres, selectedYear, selectedRating, allMovies]);
+    }, [searchQuery, selectedMood, selectedType, selectedGenres, selectedYear, selectedRating, allMovies]);
 
     const handleGenreToggle = (genre: string) => {
         setSelectedGenres((prev) =>
@@ -123,6 +130,7 @@ export default function ExplorePage() {
 
     const handleResetFilters = () => {
         setSearchQuery("");
+        setSelectedMood("all");
         setSelectedType("all");
         setSelectedGenres([]);
         setSelectedYear("all");
@@ -145,6 +153,11 @@ export default function ExplorePage() {
                     <p className="text-zinc-400 text-sm md:text-base">
                         {t("explore.subtitle")}
                     </p>
+                </div>
+
+                {/* Mood Picker Showcase */}
+                <div className="p-5 md:p-6 rounded-2xl bg-zinc-900/40 border border-white/5 shadow-xl">
+                    <MoodPicker activeMood={selectedMood} onSelectMood={setSelectedMood} />
                 </div>
 
                 {/* Collapsible Mobile Filters Button */}

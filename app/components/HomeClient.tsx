@@ -8,6 +8,8 @@ import { MovieModal } from "./MovieModal";
 import { ContinueWatchingRow } from "./ContinueWatchingRow";
 import { MovieCard } from "./MovieCard";
 import { Movie } from "@/app/lib/movies";
+import { MoodPicker } from "./MoodPicker";
+import { MoodId, MOOD_DEFINITIONS } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
 import { useWatchlist } from "@/app/context/watchlist-context";
 import { useLanguage } from "@/app/context/language-context";
@@ -32,10 +34,11 @@ export function HomeClient({
     const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
     const [recommendations, setRecommendations] = useState<Movie[]>([]);
     const [activeGenre, setActiveGenre] = useState<string>("all");
+    const [activeMood, setActiveMood] = useState<MoodId>("all");
     
     const { history } = useHistory();
     const { watchlist } = useWatchlist();
-    const { t } = useLanguage();
+    const { t, locale } = useLanguage();
 
     const handleOpenModal = (movie: Movie) => {
         setSelectedMovie(movie);
@@ -65,6 +68,14 @@ export function HomeClient({
                 return [];
         }
     }, [activeGenre, trending, action, anime, scifi]);
+
+    // Dynamic Mood Filtered Movies
+    const moodFilteredMovies = useMemo(() => {
+        if (activeMood === "all") return [];
+        return allMovies.filter((m) => m.mood?.includes(activeMood));
+    }, [activeMood, allMovies]);
+
+    const activeMoodItem = MOOD_DEFINITIONS.find((m) => m.id === activeMood);
 
     // Personalized Recommendation Algorithm
     useEffect(() => {
@@ -119,8 +130,54 @@ export function HomeClient({
                 onOpenModal={handleOpenModal}
             />
 
+            {/* Interactive Mood Picker Hub */}
+            <div className="relative z-40 -mt-6 md:-mt-10 max-w-7xl mx-auto px-6 mb-8">
+                <div className="p-5 md:p-6 rounded-3xl bg-[#121217]/90 border border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-950/30">
+                    <MoodPicker activeMood={activeMood} onSelectMood={setActiveMood} />
+                </div>
+            </div>
+
+            {/* Active Mood Showcase Grid */}
+            {activeMood !== "all" && moodFilteredMovies.length > 0 && (
+                <div className="relative z-30 max-w-7xl mx-auto px-6 mb-12 space-y-6 animate-fade-in">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                        <div className="space-y-1">
+                            <h2 className="text-xl md:text-2xl font-extrabold text-white flex items-center gap-2.5">
+                                <span className="text-2xl">{activeMoodItem?.emoji}</span>
+                                <span>{t(activeMoodItem?.labelKey || "")}</span>
+                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-300 font-bold">
+                                    {moodFilteredMovies.length} {t("nav.items_suffix")}
+                                </span>
+                            </h2>
+                            <p className="text-xs text-zinc-400">{t(activeMoodItem?.descKey || "")}</p>
+                        </div>
+                        <button
+                            onClick={() => setActiveMood("all")}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer border border-white/5"
+                        >
+                            {locale === "id" ? "Reset Mood" : "Reset Mood"}
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                        {moodFilteredMovies.map((movie) => (
+                            <MovieCard
+                                key={movie._id}
+                                id={movie._id}
+                                title={movie.title}
+                                year={Number(movie.year)}
+                                rating={movie.vote || 0}
+                                posterUrl={movie.poster}
+                                movie={movie}
+                                onOpenModal={handleOpenModal}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Quick Genre Tag Filters */}
-            <div className="relative z-40 -mt-8 md:-mt-12 max-w-7xl mx-auto px-6 mb-8 overflow-x-auto scrollbar-hide flex items-center gap-2.5">
+            <div className="relative z-30 max-w-7xl mx-auto px-6 mb-8 overflow-x-auto scrollbar-hide flex items-center gap-2.5">
                 {genres.map((g) => (
                     <button
                         key={g.id}
