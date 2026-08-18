@@ -120,6 +120,24 @@ export const translations = {
         "search.loading": "Mencari...",
         "search.empty": "Tidak ada film ditemukan untuk",
 
+        // Mood Translations
+        "mood.all": "Semua Suasana",
+        "mood.all_desc": "Jelajahi seluruh koleksi",
+        "mood.adrenaline": "Adrenalin & Tegang",
+        "mood.adrenaline_desc": "Aksi mendebarkan & pertarungan epik",
+        "mood.chill": "Santai & Seru",
+        "mood.chill_desc": "Lucu, menyenangkan & menghibur",
+        "mood.mindblown": "Mind-Blowing",
+        "mood.mindblown_desc": "Plot twist & konsep sci-fi luar biasa",
+        "mood.emotional": "Baper & Emosional",
+        "mood.emotional_desc": "Menyentuh hati & bikin terharu",
+        "mood.spooky": "Horor & Merinding",
+        "mood.spooky_desc": "Mencekam, misteri & suasana gelap",
+        "mood.fantasy": "Anime & Magis",
+        "mood.fantasy_desc": "Dunia fantasi magis & petualangan anime",
+        "mood.section_title": "Pilih Sesuai Suasana Hatimu",
+        "mood.section_desc": "Temukan kurasi film terbaik yang pas dengan vibe dan perasaanmu saat ini.",
+
         // Ambient Themes
         "watch.ambient_title": "Pencahayaan Ambient",
         "watch.ambient_black": "Pitch Black",
@@ -245,6 +263,24 @@ export const translations = {
         "search.title": "Search Results for",
         "search.loading": "Searching...",
         "search.empty": "No movies found for",
+
+        // Mood Translations
+        "mood.all": "All Moods",
+        "mood.all_desc": "Explore the full collection",
+        "mood.adrenaline": "Adrenaline & Action",
+        "mood.adrenaline_desc": "Thrilling action & high stakes showdowns",
+        "mood.chill": "Chill & Comedy",
+        "mood.chill_desc": "Funny, lighthearted & fun adventures",
+        "mood.mindblown": "Mind-Bending",
+        "mood.mindblown_desc": "Twisted plots & stunning sci-fi concepts",
+        "mood.emotional": "Emotional & Touching",
+        "mood.emotional_desc": "Heartwarming, deep & tear-jerking tales",
+        "mood.spooky": "Spooky & Dark",
+        "mood.spooky_desc": "Dark chills, mystery & creepy atmosphere",
+        "mood.fantasy": "Anime & Fantasy",
+        "mood.fantasy_desc": "Magical worlds & epic animation stories",
+        "mood.section_title": "Pick by Your Mood",
+        "mood.section_desc": "Discover curated movies matching your current vibe & feeling.",
 
         // Ambient Themes
         "watch.ambient_title": "Ambient Lighting",
