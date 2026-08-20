@@ -9,6 +9,7 @@ import { ContinueWatchingRow } from "./ContinueWatchingRow";
 import { MovieCard } from "./MovieCard";
 import { Movie } from "@/app/lib/movies";
 import { MoodPicker } from "./MoodPicker";
+import { Top10Row } from "./Top10Row";
 import { MoodId, MOOD_DEFINITIONS } from "@/app/lib/movies";
 import { useHistory } from "@/app/context/history-context";
 import { useWatchlist } from "@/app/context/watchlist-context";
@@ -74,6 +75,13 @@ export function HomeClient({
         if (activeMood === "all") return [];
         return allMovies.filter((m) => m.mood?.includes(activeMood));
     }, [activeMood, allMovies]);
+
+    // Top 10 Ranked Movies by Rating / Popularity
+    const top10Movies = useMemo(() => {
+        return [...allMovies]
+            .sort((a, b) => (b.vote || 0) - (a.vote || 0))
+            .slice(0, 10);
+    }, [allMovies]);
 
     const activeMoodItem = MOOD_DEFINITIONS.find((m) => m.id === activeMood);
 
@@ -215,6 +223,15 @@ export function HomeClient({
                             <MovieRow
                                 title={t("home.recommendations")}
                                 movies={recommendations}
+                                onOpenModal={handleOpenModal}
+                            />
+                        )}
+
+                        {/* Netflix-Style Top 10 Row */}
+                        {top10Movies.length > 0 && (
+                            <Top10Row
+                                title={t("home.row.top10")}
+                                movies={top10Movies}
                                 onOpenModal={handleOpenModal}
                             />
                         )}
