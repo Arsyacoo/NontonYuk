@@ -19,8 +19,11 @@ import {
     ChevronLeft,
     ChevronRight,
     Timer,
-    CheckCircle2
+    CheckCircle2,
+    FastForward,
+    X
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { use, useState, useEffect, useRef } from "react";
 import { clsx } from "clsx";
 import { getAllMovies, Movie } from "@/app/lib/movies";
@@ -71,6 +74,17 @@ export default function WatchPage({ params }: WatchPageProps) {
     const [isAutoNextEnabled, setIsAutoNextEnabled] = useState(true);
     const [isAutoNextActive, setIsAutoNextActive] = useState(false);
     const [autoNextCountdown, setAutoNextCountdown] = useState(10);
+
+    // Skip Intro States
+    const [isSkipIntroVisible, setIsSkipIntroVisible] = useState(true);
+
+    const handleSkipIntro = () => {
+        showHUD(
+            locale === "id"
+                ? "⏭️ Intro berhasil dilewati (+85 detik)"
+                : "⏭️ Intro skipped (+85 seconds)"
+        );
+    };
 
     // Load saved preferences
     useEffect(() => {
@@ -253,6 +267,9 @@ export default function WatchPage({ params }: WatchPageProps) {
                 e.preventDefault();
                 showHUD(`⏮️ Episode ${prevEpisode.episode_number}: ${prevEpisode.title}`);
                 router.push(`/watch/${id}?ep=${prevEpisode.episode_number}`);
+            } else if (e.key === "s" || e.key === "S") {
+                e.preventDefault();
+                handleSkipIntro();
             }
         };
 
@@ -429,6 +446,39 @@ export default function WatchPage({ params }: WatchPageProps) {
                     className="w-full h-full object-contain"
                     allowFullScreen
                 />
+
+                {/* Floating Netflix-Style Skip Intro Button Overlay */}
+                <AnimatePresence>
+                    {isSkipIntroVisible && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 15, scale: 0.9 }}
+                            transition={{ duration: 0.25 }}
+                            className="absolute bottom-5 right-5 z-40 flex items-center gap-2"
+                        >
+                            <button
+                                onClick={handleSkipIntro}
+                                className="group/skip flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-white/20 bg-black/80 hover:bg-rose-600 hover:border-rose-400 text-white font-bold text-xs sm:text-sm backdrop-blur-md shadow-2xl transition-all cursor-pointer active:scale-95 shadow-black/80"
+                                title={locale === "id" ? "Lewati Intro (+85s) - Tekan tombol S" : "Skip Intro (+85s) - Press S key"}
+                            >
+                                <FastForward size={16} className="text-rose-400 group-hover/skip:text-white transition-colors" />
+                                <span>{locale === "id" ? "Lewati Intro" : "Skip Intro"}</span>
+                                <kbd className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-white/10 text-[10px] text-zinc-300 font-bold border border-white/15">
+                                    S
+                                </kbd>
+                            </button>
+
+                            <button
+                                onClick={() => setIsSkipIntroVisible(false)}
+                                className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/60 border border-white/10 text-zinc-400 hover:text-white hover:bg-black/90 transition-colors cursor-pointer backdrop-blur-md"
+                                title={locale === "id" ? "Tutup tombol" : "Dismiss"}
+                            >
+                                <X size={14} />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Details Section & Server Switcher */}
