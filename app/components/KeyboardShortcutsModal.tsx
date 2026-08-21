@@ -31,6 +31,11 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             desc: locale === "id" ? "Masuk ke mode layar penuh" : "Toggle full browser screen",
         },
         {
+            key: "S",
+            label: locale === "id" ? "Lewati Intro (+85s)" : "Skip Intro (+85s)",
+            desc: locale === "id" ? "Lompati lagu opening/intro tayangan" : "Jump past intro opening sequence",
+        },
+        {
             key: "N",
             label: locale === "id" ? "Episode Selanjutnya" : "Next Episode",
             desc: locale === "id" ? "Lompat ke episode berikutnya (Serial)" : "Jump to next episode (Series)",
